@@ -344,7 +344,7 @@ const Board  = ()=>{
             onMouseUp={handleLettingPiece}
             onMouseMoveCapture={handleMovingPiece}
         >
-                <div className='text-center'>{turn === 'black' ? 'black': 'white'} turn </div>
+                <div className='text-center text-black'>{turn === 'black' ? 'black': 'white'} turn </div>
             {
                 new Array(8).fill(0).map((_,i)=>{
                     return(
