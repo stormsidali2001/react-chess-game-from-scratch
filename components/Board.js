@@ -337,14 +337,16 @@ const Board  = ()=>{
      
     }
     return (
-        <div 
+        <div className="flex justify-center flex-col text-2xl font-bold gap-5">
+           <div className='text-center text-black'>{turn === 'black' ? 'black': 'white'} turn </div>
+
+           <div 
             ref={boardRef} 
             className="grid grid-cols-8 grid-rows-8 w-[500px] h-[500px]  border-2"
             onMouseDown={handleHoldingPiece}
             onMouseUp={handleLettingPiece}
             onMouseMoveCapture={handleMovingPiece}
         >
-                <div className='text-center text-black'>{turn === 'black' ? 'black': 'white'} turn </div>
             {
                 new Array(8).fill(0).map((_,i)=>{
                     return(
@@ -364,6 +366,8 @@ const Board  = ()=>{
                 })
             }
         </div>
+        </div>
+     
     )
 
 } 
