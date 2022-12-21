@@ -24,14 +24,14 @@ const initBoard = ()=>{
     //bishop
         //black
         newPieces[`${2}-${7}`] = {name:"bishop",type:"black"};
-        newPieces[`${6}-${7}`] = {name:"bishop",type:"black"};
+        newPieces[`${5}-${7}`] = {name:"bishop",type:"black"};
         //white
         newPieces[`${2}-${0}`] = {name:"bishop",type:"white"};
         newPieces[`${5}-${0}`] = {name:"bishop",type:"white"};
     // //knight
         //black
         newPieces[`${1}-${7}`] = {name:"knight",type:"black"};
-        newPieces[`${5}-${7}`] = {name:"knight",type:"black"};
+        newPieces[`${6}-${7}`] = {name:"knight",type:"black"};
         //white
         newPieces[`${1}-${0}`] = {name:"knight",type:"white"};
         newPieces[`${6}-${0}`] = {name:"knight",type:"white"};
