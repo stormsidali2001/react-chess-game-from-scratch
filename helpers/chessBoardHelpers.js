@@ -20,31 +20,26 @@ const initBoard = ()=>{
    return newPieces;
 }
 
-
 const pieceSide = (type)=>
 {
    if(type =="white") return "top"
    else if("black") return "down";
 }
-const allowedVectorMoves = ({x,y,pieceType,pieceName},pieces,withoutEnemyBreak = null)=>{
-    
-   
 
+const allowedVectorMoves = ({x,y,pieceType,pieceName},pieces,withoutEnemyBreak = null) => {
+    
     const side = pieceSide(pieceType);
   
     if(pieceName==="pawn")
     {
-     
       return __generatePawnMoves({x,y,pieceType,side},pieces);
     }
     else if(pieceName === "bishop")
     {
         return __generateBishopMoves({x,y,pieceType},pieces,withoutEnemyBreak)
-     
     }
     else if(pieceName === "rook")
     {
-      
         return __generateRookMoves({x,y,pieceType},pieces,withoutEnemyBreak);
     }
     else if (pieceName === 'queen'){
@@ -62,8 +57,8 @@ const allowedVectorMoves = ({x,y,pieceType,pieceName},pieces,withoutEnemyBreak =
 
     return [];
     
-  
 }
+
 const allowedMovesIfKingCheck = ({x,y,pieceType,pieceName},pieces,checPieces,kingCoord)=>{
     // pieces can only move to save the king which is actually in check
     const pieceMoves = allowedVectorMoves({x:x,y:y,pieceName,pieceType},pieces);
@@ -115,23 +110,23 @@ const allowedMovesIfKingCheck = ({x,y,pieceType,pieceName},pieces,checPieces,kin
   return [...tmpMv]
 
 }
+
 const getKingCoordinates = (pieces,kingType)=>{
-   
     for(const key in pieces){
 
         let [px,py] = key.split('-');
         const p = {...pieces[key],x:+px,y:+py};
         if(p.name === 'king' && p.type === kingType){ 
             return {x:p.x,y:p.y}
-            
         }
         
     }
-
 }
+
 const isKingInChec = (pieces,kingType)=>{ 
    
-    const king = getKingCoordinates(pieces,kingType);
+    const king = getKingCoordinates(pieces, kingType);
+
     const checPieces = [];
   
     for(const key in pieces){
@@ -151,55 +146,48 @@ const isKingInChec = (pieces,kingType)=>{
     }
     return {inChec:checPieces.length >=1,checPieces,kingCoord:king};
 }
-function __generatePawnMoves({x,y,pieceType,side},pieces){
-    const inverseY = arr=>{
+
+function __generatePawnMoves({x,y,pieceType,side},pieces) { 
+
+    const inverseY = arr => {
         return arr.map(e=>({...e,y:-e.y}))
-         }
+    }
+
     let tmp = [];
 
-    if(y===6 || y===1)
-       {
-           tmp =  [{x:0,y:1},{x:0,y:2}];
-       
-            if(side=="down") 
-            tmp = inverseY(tmp);
-           
-           
-            
-       }
-    
-       else 
-       {
+    if(y===6 || y===1) {
+           tmp =  [{x:0, y:1}, {x:0, y:2}];
+           if(side == "down") 
+             tmp = inverseY(tmp);
+    } else {
         tmp = [{x:0,y:1}];
-       
         if(side==="down") 
           tmp = inverseY(tmp);
-         
-        
+    }
+
+    //removing blocking pieces (ally or enemy)
+    for(let i=0;i<tmp.length;i++){
+        const vecEl = tmp[i];
+        if(pieces[`${vecEl.x+x}-${vecEl.y+y}`]) {
+                tmp.splice(i,1);
+                i--;
+        }
+    }
+
+    // addding pieces which we can capture
+    let p = pieces[`${x+1}-${(side==="down"?-1:1)+y}`];
+    if(p && (pieceSide(p.type)!=side)){  //right capture move
+        tmp.push({x:1,y:1*((side==="down")?-1:1),capture:true})
+    }
+
+    p = pieces[`${x-1}-${(side==="down"?-1:1)+y}`];
+    if(p && (pieceSide(p.type)!=side)){  //left capture move
+        tmp.push({x:-1,y:1*((side==="down")?-1:1),capture:true})
+    }
     
-       }
-       //removing blocking pieces (ally or enemy)
-       for(let i=0;i<tmp.length;i++){
-           const vecEl = tmp[i];
-           if(pieces[`${vecEl.x+x}-${vecEl.y+y}`]) {
-                    tmp.splice(i,1);
-                    i--;
-             }
-
-       }
-       // addding pieces which we can capture
-       let p = pieces[`${x+1}-${(side==="down"?-1:1)+y}`];
-       if(p && (pieceSide(p.type)!=side)){  //right capture move
-            tmp.push({x:1,y:1*((side==="down")?-1:1),capture:true})
-       }
-        p = pieces[`${x-1}-${(side==="down"?-1:1)+y}`];
-        if(p && (pieceSide(p.type)!=side)){  //left capture move
-            tmp.push({x:-1,y:1*((side==="down")?-1:1),capture:true})
-       }
-       
-       return tmp;
-
+    return tmp;
 }
+
 function __generateRookMoves({x,y,pieceType},pieces,withoutEnemyBreak = null){
     let tmp = [];
         
@@ -229,7 +217,7 @@ function __generateRookMoves({x,y,pieceType},pieces,withoutEnemyBreak = null){
                 {
                      //enemy piece  : push and stop
                      tmp.push({x:rook.x-x , y : rook.y-y})
-                     if(!withoutEnemyBreak || withoutEnemyBreak&&p.name!='king')   break;  
+                     if(!withoutEnemyBreak || withoutEnemyBreak && p.name!='king')   break;  
                 }
 
             }else{
@@ -453,7 +441,7 @@ function __generateKingMoves({x,y,pieceType},pieces){
        
     
              }else if(p.name === 'king'){
-                    console.log('king',p.type)
+                    // console.log('king',p.type)
                     let vec = [{x:1,y:1},{x:-1,y:1} , {x:1,y:-1},{x:-1,y:-1} , {x:1,y:0},{x:-1,y:0}, {x:0,y:1},{x:0,y:-1}];
                     //removing out of board moves
                     for(let i=0;i<vec.length;i++)
