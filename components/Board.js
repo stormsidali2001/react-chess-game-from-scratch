@@ -12,8 +12,10 @@ const Board  = ()=>{
     const [turn,setTurn] = useState('black');
   
     const boardRef = useRef(null);
+
     useEffect(()=>{
         const tiles = boardRef.current.children;
+        console.log(tiles);
         let arr = [];
         for(let i=0;i<tiles.length;i++)
         {
@@ -24,120 +26,127 @@ const Board  = ()=>{
        setHeighlightedTiles(arr);
     },[])
 
-  
+    
+    useEffect(() => {
+        console.log(heighlightedTiles)
+    }, [heighlightedTiles])
 
-    const handleHoldingPiece = (e)=>{
+
+    const handleHoldingPiece = (e) => {
+
+        console.log('holding the piece ');
        
-        //resetting the colors of the tiles
         const tiles = boardRef.current.children;
+        
+        //resetting the colors of the tiles
         heighlightedTiles.forEach(el=>{
             tiles[el.num].style.backgroundColor = el.bg;
             tiles[el.num].style.border = "none";
             tiles[el.num].style.opacity = "1";
-
-
         });
-       
-       
-      
 
+        // e.target here pointing to img
+        // e.target.parentElement pointing to wrapper of img or (tile)
         const tile_html = e.target.parentElement;
      
+
+        // what i do : make function do nothing when user hold an empty tile (doesn't contain piece)
         if(!tile_html.classList.contains("piece")) return;
 
         
+        // here just getting the width and height of tile (width & height of the tile in general :) should be constant?!)
         const tile_w = tiles[0].getBoundingClientRect().width;
         const tile_h = tiles[0].getBoundingClientRect().height;
-        let x = e.clientX - boardRef.current.getBoundingClientRect().x;
+
+        
+        // The clientX : provides the horizontal coordinate within the application's viewport at which the event occurred
+        // The clientY : provides the vertical coordinate within the application's viewport at which the event occurred
+        
+
+        
+        // element.getBoundingClientRect()
+        //  - https://developer.mozilla.org/en-US/docs/Web/API/Element/getBoundingClientRect
+    
+
+
+        // here we are getting the coordinates of mouse horizontally and vertically using clientX & clientY but within the viewport not the tiles container in other word the x and y of mouse event in the entire html 
+
+        // and then we substract left and top bounding of rect (which is tiles container) from clientX and clientY
+
+        // x and y are the exact coordinate of the tile
+      
+        let x = e.clientX - boardRef.current.getBoundingClientRect().left;
         let y = e.clientY - boardRef.current.getBoundingClientRect().top;
-        x =Math.floor(x/tile_w) ;
-        y =Math.floor(y/tile_h) ;
+
+
+        // here we are getting the indexes of tile it's like (i, j in matrix)
+        x = Math.floor(x/tile_w) ;
+        y = Math.floor(y/tile_h) ;
+
 
         const p = pieces[`${x}-${y}`]; // holded piece
 
         if(p.type !== turn ){
-            console.log(p,'its not your turn')
+            console.log("%cMoving not allowed(opponent turn now)", "color:orange");
             setMovesVector([])
             return;
-           
         }
 
         // calculate the allowed vector of moves
         let newMovesVect;
        
-        const {inChec,checPieces,kingCoord} = isKingInChec(pieces,turn);
-        console.log(`${p.type} king in chec`,inChec)
-       
-      
-       
+        const { inChec, checPieces, kingCoord } = isKingInChec(pieces,turn);
 
-        if(inChec && p.name!= 'king'){
+        console.log(`%c${p.type} king in chec`, "color:purple", inChec);
+       
+        if(inChec && p.name != 'king'){
             newMovesVect = allowedMovesIfKingCheck({x:x,y:y,pieceName:p.name,pieceType:p.type},pieces,checPieces,kingCoord);
-           
         }else{
-             newMovesVect = allowedVectorMoves({x,y,pieceName:p.name,pieceType:p.type},pieces);
+            newMovesVect = allowedVectorMoves({x,y,pieceName:p.name,pieceType:p.type},pieces);
         }
 
        
         /*
-
             will king be in chec after that move
         */
-       for(let i=0;i<newMovesVect.length;i++){
-           const mv = newMovesVect[i];
-          
-           
-           const pb ={...pieces[`${x}-${y}`]};
-           const tmpPices = {...pieces};
-          
-           if(!tmpPices[`${x + mv.x}-${y +mv.y}`]){
+        for (let i = 0; i < newMovesVect.length; i++) {
 
-            tmpPices[`${x + mv.x}-${y +mv.y}`] = pb
-         
+            const mv = newMovesVect[i];
+            const pb = { ...pieces[`${x}-${y}`] };
+            const tmpPices = { ...pieces };
 
-           }else{
-            tmpPices[`${x + mv.x}-${y +mv.y}`] = pb;
-           }
-           delete tmpPices[`${x}-${y}`];
-     
-
-           const {inChec,checPieces} = isKingInChec(tmpPices,turn);
-           console.log(`${x + mv.x}-${y +mv.y} ${inChec} ${turn} `,checPieces)
-           if(inChec) {
-               newMovesVect.splice(i,1);
-               i--;
+            if (!tmpPices[`${x + mv.x}-${y + mv.y}`]) {
+                tmpPices[`${x + mv.x}-${y + mv.y}`] = pb
+            } else {
+                tmpPices[`${x + mv.x}-${y + mv.y}`] = pb;
             }
-           
-          
-       }
-        /*
 
-            ***********************************
-        */
-       
-       
+            delete tmpPices[`${x}-${y}`];
+            const { inChec, checPieces } = isKingInChec(tmpPices, turn);
+            //    console.log(`${x + mv.x}-${y +mv.y} ${inChec} ${turn} `,checPieces)
+            if (inChec) {
+                newMovesVect.splice(i, 1);
+                i--;
+            }
+        }
       
         if(newMovesVect)newMovesVect.forEach(m=>{
             highlightTileNum({x:m.x+x,y:m.y+y})
         })
-
-
+        
         setPieceInHand({html:e.target,x:x,y:y})
         setMovesVector(newMovesVect);
      
-     
-
-
     }
+
     const handleLettingPiece = (e)=>{
+
           //resetting the colors of the tiles
           const tiles = boardRef.current.children;
           heighlightedTiles.forEach(el=>{
               tiles[el.num].style.backgroundColor = el.bg;
               tiles[el.num].style.border = "none";
               tiles[el.num].style.opacity = "1";
-  
-  
           })
 
           
@@ -199,11 +208,11 @@ const Board  = ()=>{
               delete newPieces[`${beginingPieceX}-${beginingPieceY}`];
 
               const pTarget = newPieces[`${x}-${y}`];
-              console.log(pTarget,'****************************')
+            //   console.log(pTarget,'****************************')
               if(pTarget.name ==="pawn" && ((y===0)&&(pieceSide(pTarget.type)==="down") || ((y===7)&&(pieceSide(pTarget.type)==="top"))))
               {
                   newPieces[`${x}-${y}`].name = 'queen'
-                  console.log('changed to queen..............................')
+                //   console.log('changed to queen..............................')
                   
               }
         
@@ -228,12 +237,12 @@ const Board  = ()=>{
             opType = 'white'
         }
         // chec mate detection 
-        console.log('checking chec mate------------------------------')
+        // console.log('checking chec mate------------------------------')
         const {inChec,kingCoord,checPieces} = isKingInChec(newPieces,opType);
         const opKingMoves = allowedVectorMoves({x:kingCoord.x,y:kingCoord.y,pieceName:'king',pieceType:opType},newPieces);
         const movesExist = false;
-        console.log(inChec,opKingMoves,opType)
-        console.log('newPieces',newPieces)
+        // console.log(inChec,opKingMoves,opType)
+        // console.log('newPieces',newPieces)
         if(inChec && opKingMoves.length === 0){
             for(const key in newPieces){
                 const p = newPieces[key];
@@ -241,105 +250,84 @@ const Board  = ()=>{
                 const [px,py] = key.split('-');
                  p = {...p,x:+px,y:+py};
                 const moves =  allowedMovesIfKingCheck({x:p.x,y:p.y,pieceName:p.name,pieceType:p.type},newPieces,checPieces,kingCoord);
-                console.log(p,moves)
+                // console.log(p,moves)
                 if(moves.length != 0){
                     movesExist = true;
                   
                 }
             }
         }
+
         if(!movesExist && inChec && opKingMoves.length === 0){
            setTimeout(()=>{
             alert('checkmate !!!!!!!!!!!!!',turn,' won the game')
             window.location.reload()
-
            },500) 
         }
-        console.log('checking chec mate------------------------------')
+        // console.log('checking chec mate------------------------------')
 
-
-     
-       
        if(turn === 'white'){
         setTurn('black')
-    }else if( turn === 'black'){
-        setTurn('white')
+        }else if( turn === 'black'){
+            setTurn('white')
+        }  
+
     }
-         
-        
-        
-     
-        
-    }
-    const handleMovingPiece = (e)=>{
+
+    const handleMovingPiece = (e)=> {  
         
         e.preventDefault();
+
         const piece = pieceInHand.html;
       
-         if(pieceInHand.html) 
-         {
-          
+         if(pieceInHand.html) {  
+            
+            let numY = parseFloat(piece.getBoundingClientRect().top)-18;
+            let numX = parseFloat(piece.getBoundingClientRect().left)-18;
+
+            numY += (e.pageY - numY) * 0.4;
+            numX +=  (e.pageX - numX) * 0.4;
+            
+            const limits = boardRef.current.getBoundingClientRect();
+
+            // just return nothing when the piece go over boundaries
+            if (numX < limits.x ||
+                numX > limits.right - piece.getBoundingClientRect().width ||
+                numY < limits.top ||
+                numY > limits.bottom - piece.getBoundingClientRect().height
+             ) return;
         
-      
-         
-         let numY = parseFloat(piece.getBoundingClientRect().top)-18;
-         let numX = parseFloat(piece.getBoundingClientRect().left)-18;
-         const limits = boardRef.current.getBoundingClientRect();
-     
-         numY += (e.pageY-numY)*0.4;
-         numX +=  (e.pageX-numX)*0.4;
- 
-         if(numX < limits.x) 
-         {
-             numX = limits.x;
-         }
-         if( numX >limits.x+limits.width-piece.getBoundingClientRect().width) 
-         {
-             numX = limits.x+limits.width-piece.getBoundingClientRect().width;
-         }
-         //
-         if(numY < limits.top) 
-         {
-             numY = limits.top;
-         }
-         if( numY >limits.bottom- piece.getBoundingClientRect().height) 
-         {
-             numY = numY >limits.bottom-piece.getBoundingClientRect().height;
-         }
-        
-         piece.style.top=numY+"px";
-         piece.style.left=numX+"px";
-         }
+            piece.style.top= numY + "px";
+            piece.style.left= numX + "px";
+
+        }
     }
+
     const highlightTileNum = (tileCoordinates)=>
-    {
+        {
+            
+            const getNumFromCoordinates = (tileCoordinates)=>{
+                return (tileCoordinates.x)+tileCoordinates.y*8;
+            }
+            
+            const tiles = boardRef.current.children;
+    
+            let num = getNumFromCoordinates(tileCoordinates);
+            if(num>63 || num<0){
+                // console.log("ERROR:highlightTileNum failed the coordinates of the tile are not valide");
+                return;
+            }
+
+            tiles[num].style.backgroundColor="red";
+            tiles[num].style.opacity="0.5";
+            tiles[num].style.border="1px solid black"
         
-        const getNumFromCoordinates = (tileCoordinates)=>{
-            return (tileCoordinates.x)+tileCoordinates.y*8;
-        }
-        
-        const tiles = boardRef.current.children;
-   
-        let num = getNumFromCoordinates(tileCoordinates);
-        if(num>63 || num<0){
-            console.log("ERROR:highlightTileNum failed the coordinates of the tile are not valide");
-            return;
-        }
-
-        tiles[num].style.backgroundColor="green";
-        tiles[num].style.opacity="0.5";
-        tiles[num].style.border="1px solid black"
-       
-     
-
-
-       
-     
     }
+
+
     return (
         <div className="flex justify-center flex-col text-2xl font-bold gap-5">
            <div className='text-center text-black'>{turn === 'black' ? 'black': 'white'} turn </div>
-
            <div 
             ref={boardRef} 
             className="grid grid-cols-8 grid-rows-8 w-[500px] h-[500px]  border-2"
@@ -350,17 +338,14 @@ const Board  = ()=>{
             {
                 new Array(8).fill(0).map((_,i)=>{
                     return(
-                        new Array(8).fill(0).map((_,j)=>{
-                            
+                        new Array(8).fill(0).map((_,j)=>{ 
                             return(
                                 <Tile
                                     key ={`${i}-${j}`}
                                     color = {(i+j)% 2 === 0 ?'white':'black'}
                                     piece = {pieces[`${j}-${i}`]}
                                 />
-
                             )
-                         
                         })
                     )
                 })
