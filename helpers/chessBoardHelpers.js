@@ -1,78 +1,45 @@
 
 const initBoard = ()=>{
+
     const newPieces = {};
-    //Pawn
-    for(let j=0;j<8;j++)
-    {
-        //black
-        newPieces[`${j}-${6}`] = {name:"pawn",type:"black"};
 
-        //white
-        newPieces[`${j}-${1}`] = {name:"pawn",type:"white"};
-     
-      
+    const pieces = ['rook', 'knight', 'bishop', 'king',  'queen','bishop', 'knight', 'rook']
+
+    for(let i=0; i<8; i++) {
+
+        // fill pawns
+        newPieces[`${i}-${1}`] = {name:"pawn",type:"white"};
+        newPieces[`${i}-${6}`] = {name:"pawn",type:"black"};
+
+        // fill rest pieces
+        newPieces[`${i}-${0}`] = {name:pieces[i], type:"white"};
+        newPieces[`${i}-${7}`] = {name:pieces[i], type:"black"};
+
     }
-  
-   
-    //rook
-        //black
-        newPieces[`${0}-${7}`] = {name:"rook",type:"black"};
-        newPieces[`${7}-${7}`] = {name:"rook",type:"black"};
-        //white
-        newPieces[`${0}-${0}`] = {name:"rook",type:"white"};
-        newPieces[`${7}-${0}`] = {name:"rook",type:"white"};
-    //bishop
-        //black
-        newPieces[`${2}-${7}`] = {name:"bishop",type:"black"};
-        newPieces[`${5}-${7}`] = {name:"bishop",type:"black"};
-        //white
-        newPieces[`${2}-${0}`] = {name:"bishop",type:"white"};
-        newPieces[`${5}-${0}`] = {name:"bishop",type:"white"};
-    // //knight
-        //black
-        newPieces[`${1}-${7}`] = {name:"knight",type:"black"};
-        newPieces[`${6}-${7}`] = {name:"knight",type:"black"};
-        //white
-        newPieces[`${1}-${0}`] = {name:"knight",type:"white"};
-        newPieces[`${6}-${0}`] = {name:"knight",type:"white"};
-    //queen
-        //black
-        newPieces[`${4}-${7}`] = {name:"queen",type:"black"};
-        //white
-        newPieces[`${4}-${0}`] = {name:"queen",type:"white"};
-     //king 
-        //black
-        newPieces[`${3}-${7}`] = {name:"king",type:"black"};
-        //white
-        newPieces[`${3}-${0}`] = {name:"king",type:"white"};
-
 
    return newPieces;
 }
+
 const pieceSide = (type)=>
 {
    if(type =="white") return "top"
    else if("black") return "down";
 }
-const allowedVectorMoves = ({x,y,pieceType,pieceName},pieces,withoutEnemyBreak = null)=>{
-    
-   
 
+const allowedVectorMoves = ({x,y,pieceType,pieceName},pieces,withoutEnemyBreak = null) => {
+    
     const side = pieceSide(pieceType);
   
     if(pieceName==="pawn")
     {
-     
       return __generatePawnMoves({x,y,pieceType,side},pieces);
     }
     else if(pieceName === "bishop")
     {
         return __generateBishopMoves({x,y,pieceType},pieces,withoutEnemyBreak)
-     
     }
     else if(pieceName === "rook")
     {
-      
         return __generateRookMoves({x,y,pieceType},pieces,withoutEnemyBreak);
     }
     else if (pieceName === 'queen'){
@@ -90,8 +57,8 @@ const allowedVectorMoves = ({x,y,pieceType,pieceName},pieces,withoutEnemyBreak =
 
     return [];
     
-  
 }
+
 const allowedMovesIfKingCheck = ({x,y,pieceType,pieceName},pieces,checPieces,kingCoord)=>{
     // pieces can only move to save the king which is actually in check
     const pieceMoves = allowedVectorMoves({x:x,y:y,pieceName,pieceType},pieces);
@@ -145,22 +112,21 @@ const allowedMovesIfKingCheck = ({x,y,pieceType,pieceName},pieces,checPieces,kin
 }
 
 const getKingCoordinates = (pieces,kingType)=>{
-   
     for(const key in pieces){
 
         let [px,py] = key.split('-');
         const p = {...pieces[key],x:+px,y:+py};
         if(p.name === 'king' && p.type === kingType){ 
             return {x:p.x,y:p.y}
-            
         }
         
     }
-
 }
+
 const isKingInChec = (pieces,kingType)=>{ 
    
-    const king = getKingCoordinates(pieces,kingType);
+    const king = getKingCoordinates(pieces, kingType);
+
     const checPieces = [];
   
     for(const key in pieces){
@@ -181,61 +147,47 @@ const isKingInChec = (pieces,kingType)=>{
     return {inChec:checPieces.length >=1,checPieces,kingCoord:king};
 }
 
+function __generatePawnMoves({x,y,pieceType,side},pieces) { 
 
-
-
-
-
-
-function __generatePawnMoves({x,y,pieceType,side},pieces){
-    const inverseY = arr=>{
+    const inverseY = arr => {
         return arr.map(e=>({...e,y:-e.y}))
-         }
+    }
+
     let tmp = [];
 
-    if(y===6 || y===1)
-       {
-           tmp =  [{x:0,y:1},{x:0,y:2}];
-       
-            if(side=="down") 
-            tmp = inverseY(tmp);
-           
-           
-            
-       }
-    
-       else 
-       {
+    if(y===6 || y===1) {
+           tmp =  [{x:0, y:1}, {x:0, y:2}];
+           if(side == "down") 
+             tmp = inverseY(tmp);
+    } else {
         tmp = [{x:0,y:1}];
-       
         if(side==="down") 
           tmp = inverseY(tmp);
-         
-        
+    }
+
+    //removing blocking pieces (ally or enemy)
+    for(let i=0;i<tmp.length;i++){
+        const vecEl = tmp[i];
+        if(pieces[`${vecEl.x+x}-${vecEl.y+y}`]) {
+                tmp.splice(i,1);
+                i--;
+        }
+    }
+
+    // addding pieces which we can capture
+    let p = pieces[`${x+1}-${(side==="down"?-1:1)+y}`];
+    if(p && (pieceSide(p.type)!=side)){  //right capture move
+        tmp.push({x:1,y:1*((side==="down")?-1:1),capture:true})
+    }
+
+    p = pieces[`${x-1}-${(side==="down"?-1:1)+y}`];
+    if(p && (pieceSide(p.type)!=side)){  //left capture move
+        tmp.push({x:-1,y:1*((side==="down")?-1:1),capture:true})
+    }
     
-       }
-       //removing blocking pieces (ally or enemy)
-       for(let i=0;i<tmp.length;i++){
-           const vecEl = tmp[i];
-           if(pieces[`${vecEl.x+x}-${vecEl.y+y}`]) {
-                    tmp.splice(i,1);
-                    i--;
-             }
-
-       }
-       // addding pieces which we can capture
-       let p = pieces[`${x+1}-${(side==="down"?-1:1)+y}`];
-       if(p && (pieceSide(p.type)!=side)){  //right capture move
-            tmp.push({x:1,y:1*((side==="down")?-1:1),capture:true})
-       }
-        p = pieces[`${x-1}-${(side==="down"?-1:1)+y}`];
-        if(p && (pieceSide(p.type)!=side)){  //left capture move
-            tmp.push({x:-1,y:1*((side==="down")?-1:1),capture:true})
-       }
-       
-       return tmp;
-
+    return tmp;
 }
+
 function __generateRookMoves({x,y,pieceType},pieces,withoutEnemyBreak = null){
     let tmp = [];
         
@@ -265,7 +217,7 @@ function __generateRookMoves({x,y,pieceType},pieces,withoutEnemyBreak = null){
                 {
                      //enemy piece  : push and stop
                      tmp.push({x:rook.x-x , y : rook.y-y})
-                     if(!withoutEnemyBreak || withoutEnemyBreak&&p.name!='king')   break;  
+                     if(!withoutEnemyBreak || withoutEnemyBreak && p.name!='king')   break;  
                 }
 
             }else{
@@ -283,7 +235,6 @@ function __generateRookMoves({x,y,pieceType},pieces,withoutEnemyBreak = null){
     return tmp;
     
 }
-
 function __generateBishopMoves({x,y,pieceType},pieces,withoutEnemyBreak = null){
     let tmp = [];
         
@@ -490,7 +441,7 @@ function __generateKingMoves({x,y,pieceType},pieces){
        
     
              }else if(p.name === 'king'){
-                    console.log('king',p.type)
+                    // console.log('king',p.type)
                     let vec = [{x:1,y:1},{x:-1,y:1} , {x:1,y:-1},{x:-1,y:-1} , {x:1,y:0},{x:-1,y:0}, {x:0,y:1},{x:0,y:-1}];
                     //removing out of board moves
                     for(let i=0;i<vec.length;i++)
@@ -548,8 +499,6 @@ function __generateKingMoves({x,y,pieceType},pieces){
            return vec;
            
 }
-
-
 
 export   {initBoard,allowedVectorMoves,isKingInChec,getKingCoordinates,pieceSide,allowedMovesIfKingCheck};
 
