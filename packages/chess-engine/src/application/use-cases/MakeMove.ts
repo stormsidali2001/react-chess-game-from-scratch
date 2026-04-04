@@ -15,12 +15,14 @@ export class MakeMoveUseCase {
 
     // 1. Validate if the move is legal (Still Domain Logic, but we can do it here or inside Game)
     const legalMoves = RulesEngine.getLegalMoves(game.board, from, game.enPassantTarget);
-    if (!legalMoves.some(m => m.equals(to))) {
+    const move = legalMoves.find(m => m.to.equals(to));
+
+    if (!move) {
       throw new IllegalMoveError();
     }
 
     // 2. MUTATE the domain object, injecting the rules engine domain service directly
-    game.makeMove(from, to, RulesEngine);
+    game.applyMove(move, RulesEngine);
 
     // 3. Persist the changes
     this.repository.save(game);

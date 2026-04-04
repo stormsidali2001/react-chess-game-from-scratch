@@ -2,6 +2,7 @@ import { Position } from '../models/Position';
 import { MoveGenerator } from './MoveGenerator';
 import { Color, getOpponentColor } from '../enums/Color';
 import { Board } from '../models/Board';
+import { Move } from '../models/Move';
 
 export class RulesEngine {
   static isKingInCheck(board: Board, color: Color): boolean {
@@ -13,19 +14,19 @@ export class RulesEngine {
     for (const [posStr, piece] of entries) {
       if (piece.color === opponentColor) {
         const moves = MoveGenerator.getValidMoves(board, Position.fromString(posStr));
-        if (moves.some(m => m.equals(kingPos))) return true;
+        if (moves.some(m => m.to.equals(kingPos))) return true;
       }
     }
     return false;
   }
 
-  static getLegalMoves(board: Board, position: Position, enPassantTarget: Position | null = null): Position[] {
+  static getLegalMoves(board: Board, position: Position, enPassantTarget: Position | null = null): Move[] {
     const piece = board.getPieceAt(position);
     if (!piece) return [];
 
     const pseudoLegalMoves = MoveGenerator.getValidMoves(board, position, enPassantTarget);
     return pseudoLegalMoves.filter(move => {
-      const simulatedBoard = board.movePiece(position, move);
+      const { board: simulatedBoard } = move.execute(board);
       return !this.isKingInCheck(simulatedBoard, piece.color);
     });
   }

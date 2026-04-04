@@ -71,8 +71,8 @@ export class GameStore implements IGameRepository {
     } else {
       const piece = this.state.game.board.getPieceAt(pos);
       if (piece && piece.color === this.state.game.turn) {
-        const moves = RulesEngine.getLegalMoves(this.state.game.board, pos);
-        this.state = { ...this.state, selectedPosition: pos, legalMoves: moves };
+        const moves = RulesEngine.getLegalMoves(this.state.game.board, pos, this.state.game.enPassantTarget);
+        this.state = { ...this.state, selectedPosition: pos, legalMoves: moves.map(m => m.to) };
       } else {
         this.state = { ...this.state, selectedPosition: null, legalMoves: [] };
       }

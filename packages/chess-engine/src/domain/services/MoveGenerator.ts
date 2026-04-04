@@ -3,9 +3,10 @@ import { Position } from '../models/Position';
 import { Color, getOpponentColor } from '../enums/Color';
 import { Board } from '../models/Board';
 import { Piece } from '../models/Piece';
+import { Move, StandardMove, DoublePawnPushMove, EnPassantMove, PromotionMove } from '../models/Move';
 
 export class MoveGenerator {
-  static getValidMoves(board: Board, position: Position, enPassantTarget: Position | null = null): Position[] {
+  static getValidMoves(board: Board, position: Position, enPassantTarget: Position | null = null): Move[] {
     const piece = board.getPieceAt(position);
     if (!piece) return [];
 
@@ -21,21 +22,27 @@ export class MoveGenerator {
     }
   }
 
-  static getPawnMoves(board: Board, pos: Position, piece: Piece, enPassantTarget: Position | null): Position[] {
-    const moves: Position[] = [];
+  static getPawnMoves(board: Board, pos: Position, piece: Piece, enPassantTarget: Position | null): Move[] {
+    const moves: Move[] = [];
     const forward = piece.color === Color.WHITE ? -1 : 1;
     const startRow = piece.color === Color.WHITE ? 6 : 1;
+    const lastRow = piece.color === Color.WHITE ? 0 : 7;
 
     // Single step: Change y (Row)
     if (Position.isValid(pos.x, pos.y + forward)) {
       const step1 = new Position(pos.x, pos.y + forward);
       if (!board.isOccupied(step1)) {
-        moves.push(step1);
+        if (step1.y === lastRow) {
+          moves.push(new PromotionMove(pos, step1, piece, undefined, PieceType.QUEEN));
+        } else {
+          moves.push(new StandardMove(pos, step1, piece));
+        }
+
         // Double step: Only if from startRow
         if (pos.y === startRow) {
           const step2 = new Position(pos.x, pos.y + forward * 2);
           if (Position.isValid(step2.x, step2.y) && !board.isOccupied(step2)) {
-            moves.push(step2);
+            moves.push(new DoublePawnPushMove(pos, step2, piece));
           }
         }
       }
@@ -46,28 +53,36 @@ export class MoveGenerator {
     for (const [dx, dy] of captures) {
       if (Position.isValid(pos.x + dx, pos.y + dy)) {
         const diagPos = new Position(pos.x + dx, pos.y + dy);
-        if (board.isOccupiedBy(diagPos, getOpponentColor(piece.color))) {
-          moves.push(diagPos);
+        const targetPiece = board.getPieceAt(diagPos);
+
+        if (targetPiece && targetPiece.color !== piece.color) {
+          if (diagPos.y === lastRow) {
+            moves.push(new PromotionMove(pos, diagPos, piece, targetPiece, PieceType.QUEEN));
+          } else {
+            moves.push(new StandardMove(pos, diagPos, piece, targetPiece));
+          }
         } else if (enPassantTarget && enPassantTarget.equals(diagPos)) {
-          // En passant allows diagonal pawn capture on an empty target square 
-          moves.push(diagPos);
+          // En passant targets an empty square but captures the pawn behind it
+          const victimPos = new Position(diagPos.x, pos.y);
+          const victimPiece = board.getPieceAt(victimPos)!;
+          moves.push(new EnPassantMove(pos, diagPos, piece, victimPiece, victimPos));
         }
       }
     }
     return moves;
   }
 
-  static getSlidingMoves(board: Board, pos: Position, piece: Piece, directions: number[][]): Position[] {
-    const moves: Position[] = [];
+  static getSlidingMoves(board: Board, pos: Position, piece: Piece, directions: number[][]): Move[] {
+    const moves: Move[] = [];
     for (const [dx, dy] of directions) {
       let nx = pos.x + dx, ny = pos.y + dy;
       while (Position.isValid(nx, ny)) {
         const nPos = new Position(nx, ny);
         const occupant = board.getPieceAt(nPos);
         if (!occupant) {
-          moves.push(nPos);
+          moves.push(new StandardMove(pos, nPos, piece));
         } else {
-          if (occupant.color !== piece.color) moves.push(nPos);
+          if (occupant.color !== piece.color) moves.push(new StandardMove(pos, nPos, piece, occupant));
           break;
         }
         nx += dx; ny += dy;
@@ -76,14 +91,16 @@ export class MoveGenerator {
     return moves;
   }
 
-  static getSteppingMoves(board: Board, pos: Position, piece: Piece, steps: number[][]): Position[] {
-    const moves: Position[] = [];
+  static getSteppingMoves(board: Board, pos: Position, piece: Piece, steps: number[][]): Move[] {
+    const moves: Move[] = [];
     for (const [dx, dy] of steps) {
       if (Position.isValid(pos.x + dx, pos.y + dy)) {
         const nPos = new Position(pos.x + dx, pos.y + dy);
         const occupant = board.getPieceAt(nPos);
-        if (!occupant || occupant.color !== piece.color) {
-          moves.push(nPos);
+        if (!occupant) {
+          moves.push(new StandardMove(pos, nPos, piece));
+        } else if (occupant.color !== piece.color) {
+          moves.push(new StandardMove(pos, nPos, piece, occupant));
         }
       }
     }

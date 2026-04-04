@@ -2,6 +2,7 @@ import { Color, getOpponentColor } from "../enums/Color";
 import { Board } from "./Board";
 import { Position } from "./Position";
 import { Piece } from "./Piece";
+import { Move } from "./Move";
 import { PieceType } from "../enums/PieceType";
 import { BaseAggregateRoot } from "../core/BaseAggregateRoot";
 import { GameOverError, InvalidTurnError } from "../errors";
@@ -70,68 +71,34 @@ export class Game extends BaseAggregateRoot {
   }
 
   /**
-   * MUTABLE Domain Logic using Double Dispatch for Domain Services
+   * MUTABLE Domain Logic using Value Objects (Path 2)
    */
-  public makeMove(from: Position, to: Position, rules: IGameRules): void {
+  public applyMove(move: Move, rules: IGameRules): void {
     if (this.status === GameStatus.CHECKMATE || this.status === GameStatus.STALEMATE) {
       throw new GameOverError();
     }
 
-    const piece = this.board.getPieceAt(from);
-    if (!piece || piece.color !== this.turn) {
+    if (move.piece.color !== this.turn) {
       throw new InvalidTurnError();
     }
 
-    const targetPiece = this.board.getPieceAt(to);
+    const { board: newBoard, capturedData, enPassantTarget: newEnPassant, movedPiece } = move.execute(this.board);
 
-    // 1. Handle Regular Captures
-    if (targetPiece) {
-      this.captured[targetPiece.color].push(targetPiece);
-      this.addDomainEvent(new PieceCapturedEvent(to, targetPiece));
+    if (capturedData) {
+      this.captured[capturedData.piece.color].push(capturedData.piece);
+      this.addDomainEvent(new PieceCapturedEvent(capturedData.position, capturedData.piece));
     }
 
-    // 1.5 Handle En Passant Captures
-    let isEnPassantCapture = false;
-    if (piece.type === PieceType.PAWN && !targetPiece && from.x !== to.x) {
-      // Diagonal pawn move to an empty square implies en passant!
-      const victimPos = new Position(to.x, from.y);
-      const victimPawn = this.board.getPieceAt(victimPos);
-      if (victimPawn) {
-        this.captured[victimPawn.color].push(victimPawn);
-        this.addDomainEvent(new PieceCapturedEvent(victimPos, victimPawn));
-        // Remove victim from the board directly as well
-        this.board = new Board(
-          new Map(Array.from(this.board.pieces.entries()).filter(([posStr]) => posStr !== victimPos.toString()))
-        );
-        isEnPassantCapture = true;
-      }
-    }
-
-    // 2. Handle Promotion Logic
-    let movedPiece = piece.cloneWithMove();
-    const lastRank = piece.color === Color.WHITE ? 0 : 7;
-    if (piece.type === PieceType.PAWN && to.y === lastRank) {
-      movedPiece = new Piece(PieceType.QUEEN, piece.color);
-    }
-
-    // 3. Update State
-    this.board = this.board.movePiece(from, to, movedPiece);
-    const capturedPiece = targetPiece || (isEnPassantCapture ? new Piece(PieceType.PAWN, getOpponentColor(this.turn)) : undefined);
-    this.history.push({ from, to, piece, captured: capturedPiece });
+    // Update State
+    this.board = newBoard;
+    this.enPassantTarget = newEnPassant;
+    this.history.push({ from: move.from, to: move.to, piece: move.piece, captured: capturedData?.piece });
     this.turn = getOpponentColor(this.turn);
 
-    // 3.5 Calculate new En Passant target
-    let nextEnPassantTarget = null;
-    if (piece.type === PieceType.PAWN && Math.abs(from.y - to.y) === 2) {
-      const stepDirection = piece.color === Color.WHITE ? -1 : 1;
-      nextEnPassantTarget = new Position(from.x, from.y + stepDirection);
-    }
-    this.enPassantTarget = nextEnPassantTarget;
+    // Record Move Event
+    this.addDomainEvent(new PieceMovedEvent(move.from, move.to, movedPiece));
 
-    // 4. Record Move Event
-    this.addDomainEvent(new PieceMovedEvent(from, to, movedPiece));
-
-    // 5. Evaluate Invariants via injected Domain Service (Double Dispatch)
+    // Evaluate Invariants
     this.evaluateGameStatus(rules);
   }
 
