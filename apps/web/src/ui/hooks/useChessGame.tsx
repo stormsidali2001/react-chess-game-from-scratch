@@ -1,10 +1,13 @@
 import { useCallback } from 'react';
 import { useSyncExternalStore } from 'use-sync-external-store/shim';
-import { gameStore } from '../../application/GameStore';
-import { Game, GameStatus } from '../../domain/models/Game';
-import { Position } from '../../domain/models/Position';
-import { Board } from '../../domain/models/Board';
-import { Color } from '../../domain/enums/Color';
+import {
+  gameStore,
+  Game,
+  GameStatus,
+  Position,
+  Board,
+  Color,
+} from '@chess/engine';
 
 export interface UseChessGameReturn {
   game: Game;
@@ -21,6 +24,7 @@ export interface UseChessGameReturn {
 export function useChessGame(): UseChessGameReturn {
   const store = useSyncExternalStore(
     gameStore.subscribe,
+    gameStore.getSnapshot,
     gameStore.getSnapshot
   );
 

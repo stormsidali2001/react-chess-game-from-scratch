@@ -1,5 +1,5 @@
 import React from "react";
-import { Piece } from "../src/domain/models/Piece";
+import { Piece } from "@chess/engine";
 
 interface TileProps {
   piece?: Piece;
@@ -18,7 +18,7 @@ const Tile: React.FC<TileProps> = ({ piece, color, highlighted, hidden, rankLabe
 
   return (
     <div className={`tile relative flex items-center justify-center w-full h-full ${bgColor} ${highlightOverlay}`}>
-      
+
       {/* Rank Label (1-8) - Top Left */}
       {rankLabel && (
         <span className={`absolute top-0.5 left-1 text-[10px] font-bold ${labelColor} pointer-events-none`}>
