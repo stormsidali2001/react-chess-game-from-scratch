@@ -41,7 +41,7 @@ export function useChessVisuals() {
 
         // 2. Handle Piece Captures
         const handlePieceCaptured = (event: PieceCapturedEvent) => {
-            const posKey = `${event.at.x}-${event.at.y}`;
+            const posKey = event.at.toAlgebraic();
             setFlashingSquares((prev) => ({ ...prev, [posKey]: true }));
 
             // Toast for high-value captures purely for visual fun

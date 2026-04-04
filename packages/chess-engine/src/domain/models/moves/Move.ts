@@ -1,6 +1,7 @@
 import { Board } from '../Board';
 import { Position } from '../Position';
 import { Piece } from '../Piece';
+import { PieceType } from '../../enums/PieceType';
 
 export interface MoveExecutionResult {
     board: Board;
@@ -15,6 +16,10 @@ export abstract class Move {
         public readonly to: Position,
         public readonly piece: Piece
     ) { }
+
+    matches(to: Position, _promotionType?: PieceType): boolean {
+        return this.to.equals(to);
+    }
 
     abstract execute(board: Board): MoveExecutionResult;
 }

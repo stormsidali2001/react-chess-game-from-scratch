@@ -1,4 +1,5 @@
 import { Position } from './Position';
+import type { AlgebraicNotation } from './Position';
 import { Color } from '../enums/Color';
 import { PieceType } from '../enums/PieceType';
 import { Piece } from './Piece';
@@ -56,7 +57,7 @@ export class Board extends ValueObject<BoardProps> {
     const entries = Array.from(this.pieces.entries());
     for (const [posStr, piece] of entries) {
       if (piece.type === PieceType.KING && piece.color === color) {
-        return Position.fromString(posStr);
+        return Position.fromString(posStr as AlgebraicNotation);
       }
     }
     return null;

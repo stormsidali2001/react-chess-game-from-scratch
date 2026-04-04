@@ -9,6 +9,10 @@ export class PromotionMove extends Move {
         super(from, to, piece);
     }
 
+    matches(to: Position, promotionType?: PieceType): boolean {
+        return this.to.equals(to) && this.promotionType === promotionType;
+    }
+
     execute(board: Board): MoveExecutionResult {
         let capturedData = undefined;
         if (this.targetPiece) {

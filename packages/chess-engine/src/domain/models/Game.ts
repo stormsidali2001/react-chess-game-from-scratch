@@ -1,11 +1,12 @@
 import { Color, getOpponentColor } from "../enums/Color";
 import { GameStatus } from "../enums/GameStatus";
+import { PieceType } from "../enums/PieceType";
 import { Board } from "./Board";
 import { Position } from "./Position";
 import { Piece } from "./Piece";
 import { Move } from "./Move";
 import { MoveRecord } from "./MoveRecord";
-import { IGameRules } from "../services/IGameRules";
+import { CastlingRights } from "./CastlingRights";
 import { BaseAggregateRoot } from "../core/BaseAggregateRoot";
 import { GameOverError, InvalidTurnError } from "../errors";
 import {
@@ -21,6 +22,8 @@ interface GameProps {
   captured: Record<Color, Piece[]>;
   status: GameStatus;
   enPassantTarget: Position | null;
+  castlingRights: CastlingRights;
+  halfMoveClock: number;
 }
 
 export class Game extends BaseAggregateRoot {
@@ -30,6 +33,8 @@ export class Game extends BaseAggregateRoot {
   private _captured: Record<Color, Piece[]>;
   private _status: GameStatus;
   private _enPassantTarget: Position | null;
+  private _castlingRights: CastlingRights;
+  private _halfMoveClock: number;
 
   private constructor(props: GameProps) {
     super();
@@ -39,6 +44,8 @@ export class Game extends BaseAggregateRoot {
     this._captured = props.captured;
     this._status = props.status;
     this._enPassantTarget = props.enPassantTarget;
+    this._castlingRights = props.castlingRights;
+    this._halfMoveClock = props.halfMoveClock;
   }
 
   get board(): Board { return this._board; }
@@ -47,6 +54,8 @@ export class Game extends BaseAggregateRoot {
   get captured(): Readonly<Record<Color, readonly Piece[]>> { return this._captured; }
   get status(): GameStatus { return this._status; }
   get enPassantTarget(): Position | null { return this._enPassantTarget; }
+  get castlingRights(): CastlingRights { return this._castlingRights; }
+  get halfMoveClock(): number { return this._halfMoveClock; }
 
   public static create(props: {
     board: Board;
@@ -55,6 +64,8 @@ export class Game extends BaseAggregateRoot {
     captured?: Record<Color, Piece[]>;
     status?: GameStatus;
     enPassantTarget?: Position | null;
+    castlingRights?: CastlingRights;
+    halfMoveClock?: number;
   }): Game {
     return new Game({
       board: props.board,
@@ -63,13 +74,16 @@ export class Game extends BaseAggregateRoot {
       captured: props.captured ?? { [Color.WHITE]: [], [Color.BLACK]: [] },
       status: props.status ?? GameStatus.ACTIVE,
       enPassantTarget: props.enPassantTarget ?? null,
+      castlingRights: props.castlingRights ?? CastlingRights.initial(),
+      halfMoveClock: props.halfMoveClock ?? 0,
     });
   }
 
-  public applyMove(move: Move, rules: IGameRules): void {
+  public applyMove(move: Move): void {
     if (
       this._status === GameStatus.CHECKMATE ||
-      this._status === GameStatus.STALEMATE
+      this._status === GameStatus.STALEMATE ||
+      this._status === GameStatus.DRAW
     ) {
       throw new GameOverError();
     }
@@ -92,6 +106,12 @@ export class Game extends BaseAggregateRoot {
       );
     }
 
+    this._halfMoveClock =
+      move.piece.type === PieceType.PAWN || capturedData
+        ? 0
+        : this._halfMoveClock + 1;
+
+    this._castlingRights = this.updatedCastlingRights(move, capturedData);
     this._board = newBoard;
     this._enPassantTarget = newEnPassant;
     this._history.push({
@@ -99,27 +119,51 @@ export class Game extends BaseAggregateRoot {
       to: move.to,
       piece: move.piece,
       captured: capturedData?.piece,
+      promotedTo:
+        move.piece.type === PieceType.PAWN && movedPiece.type !== PieceType.PAWN
+          ? movedPiece.type
+          : undefined,
     });
     this._turn = getOpponentColor(this._turn);
 
     this.addDomainEvent(new PieceMovedEvent(move.from, move.to, movedPiece));
-
-    this.evaluateGameStatus(rules);
   }
 
-  private evaluateGameStatus(rules: IGameRules): void {
-    let newStatus = GameStatus.ACTIVE;
+  /** Called by the application service after evaluating the new status via IGameRules. */
+  public updateStatus(newStatus: GameStatus): void {
+    if (this._status === newStatus) return;
+    this._status = newStatus;
+    this.addDomainEvent(new GameStatusChangedEvent(newStatus));
+  }
 
-    if (rules.isCheckmate(this._board, this._turn, this._enPassantTarget)) {
-      newStatus = GameStatus.CHECKMATE;
-    } else if (rules.isKingInCheck(this._board, this._turn)) {
-      newStatus = GameStatus.CHECK;
+  private updatedCastlingRights(
+    move: Move,
+    capturedData?: { piece: Piece; position: Position },
+  ): CastlingRights {
+    let rights = this._castlingRights;
+    const color = move.piece.color;
+    const backRank = color === Color.WHITE ? 7 : 0;
+
+    if (move.piece.type === PieceType.KING) {
+      rights = rights.revokeAll(color);
+    } else if (move.piece.type === PieceType.ROOK) {
+      if (move.from.x === 7 && move.from.y === backRank) rights = rights.revokeKingSide(color);
+      if (move.from.x === 0 && move.from.y === backRank) rights = rights.revokeQueenSide(color);
     }
 
-    if (this._status !== newStatus) {
-      this._status = newStatus;
-      this.addDomainEvent(new GameStatusChangedEvent(newStatus));
+    // Revoking rights if an opponent's rook is captured on its starting square
+    if (capturedData && capturedData.piece.type === PieceType.ROOK) {
+      const opponent = getOpponentColor(color);
+      const opponentBackRank = opponent === Color.WHITE ? 7 : 0;
+      if (capturedData.position.x === 7 && capturedData.position.y === opponentBackRank) {
+        rights = rights.revokeKingSide(opponent);
+      }
+      if (capturedData.position.x === 0 && capturedData.position.y === opponentBackRank) {
+        rights = rights.revokeQueenSide(opponent);
+      }
     }
+
+    return rights;
   }
 
   public clone(): Game {
@@ -133,6 +177,8 @@ export class Game extends BaseAggregateRoot {
       },
       status: this._status,
       enPassantTarget: this._enPassantTarget,
+      castlingRights: this._castlingRights,
+      halfMoveClock: this._halfMoveClock,
     });
     this.domainEvents.forEach((e) => newGame.addDomainEvent(e));
     return newGame;

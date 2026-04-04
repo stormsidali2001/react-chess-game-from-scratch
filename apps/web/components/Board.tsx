@@ -1,12 +1,18 @@
 import React, { useRef, useState, useEffect } from "react";
 import Tile from "./Tile";
+import PromotionPicker from "./PromotionPicker";
+import FenInput from "./FenInput";
 import { useChessGame } from "../src/ui/hooks/useChessGame";
-import { Position, Color } from "@chess/engine";
+import { Position } from "@chess/engine";
 import { useChessVisuals } from "../src/ui/hooks/useChessVisuals";
 import { Toaster } from "react-hot-toast";
 
 const Board: React.FC = () => {
-  const { board, turn, status, selectedPosition, legalMoves, formattedHistory, selectPosition, makeMove } = useChessGame();
+  const {
+    board, turn, status, selectedPosition, legalMoves, formattedHistory,
+    pendingPromotion, selectPosition, makeMove, confirmPromotion, cancelPromotion,
+    reset, loadFen,
+  } = useChessGame();
   const { isShaking, flashingSquares } = useChessVisuals();
 
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -85,13 +91,22 @@ const Board: React.FC = () => {
                   piece={board.getPieceAt(pos)}
                   highlighted={legalMoves.some(m => m.x === x && m.y === y)}
                   hidden={selectedPosition?.equals(pos)}
-                  isFlashing={flashingSquares[`${x}-${y}`]}
+                  isFlashing={flashingSquares[new Position(x, y).toAlgebraic()]}
                   rankLabel={rankLabel}
                   fileLabel={fileLabel}
                 />
               );
             })
           )}
+          {/* Promotion Picker */}
+          {pendingPromotion && (
+            <PromotionPicker
+              color={pendingPromotion.color}
+              onConfirm={confirmPromotion}
+              onCancel={cancelPromotion}
+            />
+          )}
+
           {/* Ghost Piece */}
           {draggingPiece && (
             <div
@@ -114,8 +129,10 @@ const Board: React.FC = () => {
         </div>
       </div>
 
+      {/* Right Panel: history + FEN input */}
+      <div className="flex flex-col gap-4 mt-12">
       {/* Move History Sidebar */}
-      <div className="flex flex-col w-64 h-[600px] bg-white border-2 border-slate-300 rounded-lg shadow-lg overflow-hidden mt-12">
+      <div className="flex flex-col w-64 h-[520px] bg-white border-2 border-slate-300 rounded-lg shadow-lg overflow-hidden">
         <div className="bg-slate-800 text-white p-3 font-bold text-center uppercase tracking-wide">
           Move History
         </div>
@@ -143,6 +160,10 @@ const Board: React.FC = () => {
             <div className="text-center text-slate-400 mt-10 italic">No moves yet</div>
           )}
         </div>
+      </div>
+
+      {/* FEN Input */}
+      <FenInput onLoad={loadFen} onReset={reset} />
       </div>
     </div>
   );
