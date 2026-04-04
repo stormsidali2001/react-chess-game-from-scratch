@@ -5,6 +5,8 @@ interface PositionProps {
   y: number;
 }
 
+import { InvalidPositionError } from '../errors';
+
 /**
  * x = Column (0-7, horizontal)
  * y = Row (0-7, vertical)
@@ -12,7 +14,7 @@ interface PositionProps {
 export class Position extends ValueObject<PositionProps> {
   constructor(x: number, y: number) {
     if (!Position.isValid(x, y)) {
-      throw new Error(`Invalid position: (${x}, ${y})`);
+      throw new InvalidPositionError(x, y);
     }
     super({ x, y });
   }

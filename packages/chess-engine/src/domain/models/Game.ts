@@ -4,6 +4,8 @@ import { Position } from "./Position";
 import { Piece } from "./Piece";
 import { PieceType } from "../enums/PieceType";
 import { BaseAggregateRoot } from "../core/BaseAggregateRoot";
+import { RulesEngine } from "../services/RulesEngine";
+import { GameOverError, InvalidTurnError } from "../errors";
 import {
   PieceMovedEvent,
   PieceCapturedEvent,
@@ -64,16 +66,16 @@ export class Game extends BaseAggregateRoot {
    */
   public makeMove(from: Position, to: Position): void {
     if (this.status === GameStatus.CHECKMATE || this.status === GameStatus.STALEMATE) {
-      throw new Error("Game is over");
+      throw new GameOverError();
     }
 
     const piece = this.board.getPieceAt(from);
     if (!piece || piece.color !== this.turn) {
-      throw new Error("Invalid turn or no piece at source");
+      throw new InvalidTurnError();
     }
 
     const targetPiece = this.board.getPieceAt(to);
-    
+
     // 1. Handle Captures
     if (targetPiece) {
       this.captured[targetPiece.color].push(targetPiece);
@@ -94,14 +96,27 @@ export class Game extends BaseAggregateRoot {
 
     // 4. Record Move Event
     this.addDomainEvent(new PieceMovedEvent(from, to, movedPiece));
+
+    // 5. Evaluate Invariants (Check / Checkmate)
+    this.evaluateGameStatus();
   }
 
-  public updateStatus(status: GameStatus): void {
-    if (this.status !== status) {
-      this.status = status;
-      this.addDomainEvent(new GameStatusChangedEvent(status));
+  private evaluateGameStatus(): void {
+    let newStatus = GameStatus.ACTIVE;
+
+    if (RulesEngine.isCheckmate(this.board, this.turn)) {
+      newStatus = GameStatus.CHECKMATE;
+    } else if (RulesEngine.isKingInCheck(this.board, this.turn)) {
+      newStatus = GameStatus.CHECK;
+    }
+
+    if (this.status !== newStatus) {
+      this.status = newStatus;
+      this.addDomainEvent(new GameStatusChangedEvent(newStatus));
     }
   }
+
+  // Status is now completely managed internally via evaluateGameStatus.
 
   /**
    * Helper to create a deep clone for the Application Layer's snapshotting

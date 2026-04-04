@@ -2,8 +2,9 @@ import { Game, GameStatus } from '../domain/models/Game';
 import { Position } from '../domain/models/Position';
 import { MakeMoveUseCase } from './use-cases/MakeMove';
 import { RulesEngine } from '../domain/services/RulesEngine';
-import { domainEventDispatcher } from './DomainEventDispatcher';
+import { DomainEventDispatcher, domainEventDispatcher } from './DomainEventDispatcher';
 import { MoveNotationService } from '../domain/services/MoveNotationService';
+import { IGameRepository } from './ports/IGameRepository';
 
 export type Listener = () => void;
 
@@ -14,7 +15,7 @@ export interface StoreState {
   formattedHistory: string[];
 }
 
-export class GameStore {
+export class GameStore implements IGameRepository {
   private state: StoreState;
   private listeners: Set<Listener> = new Set();
   private moveUseCase: MakeMoveUseCase;
@@ -26,8 +27,29 @@ export class GameStore {
       legalMoves: [],
       formattedHistory: [],
     };
-    this.moveUseCase = new MakeMoveUseCase();
+    this.moveUseCase = new MakeMoveUseCase(this, domainEventDispatcher);
   }
+
+  // --- IGameRepository Implementation ---
+  public getGame(): Game {
+    // Always clone when reading to ensure pure React state guarantees
+    return this.state.game.clone();
+  }
+
+  public save(game: Game): void {
+    const formattedHistory = game.history.map(m =>
+      MoveNotationService.toAlgebraic(m, game.status)
+    );
+
+    this.state = {
+      game,
+      selectedPosition: null,
+      legalMoves: [],
+      formattedHistory,
+    };
+    this.emitChange();
+  }
+  // -------------------------------------
 
   public subscribe = (listener: Listener): (() => void) => {
     this.listeners.add(listener);
@@ -58,25 +80,7 @@ export class GameStore {
     if (!from) return false;
 
     try {
-      const mutableGame = this.state.game.clone();
-      this.moveUseCase.execute(mutableGame, from, to);
-      
-      domainEventDispatcher.dispatchMany(mutableGame.domainEvents);
-      mutableGame.clearDomainEvents();
-
-      // NEW: Pass status to standard chess notation formatter
-      const formattedHistory = mutableGame.history.map(m => 
-        MoveNotationService.toAlgebraic(m, mutableGame.status)
-      );
-
-      this.state = {
-        game: mutableGame,
-        selectedPosition: null,
-        legalMoves: [],
-        formattedHistory,
-      };
-      
-      this.emitChange();
+      this.moveUseCase.execute(from, to);
       return true;
     } catch (error: any) {
       console.error('Move Error:', error.message);

@@ -2,8 +2,6 @@ import { PieceType } from '../enums/PieceType';
 import { Color } from '../enums/Color';
 import { BaseEntity } from '../core/BaseEntity';
 
-let nextId = 0;
-
 export class Piece extends BaseEntity<string> {
   constructor(
     public readonly type: PieceType,
@@ -11,8 +9,8 @@ export class Piece extends BaseEntity<string> {
     public readonly hasMoved: boolean = false,
     id?: string
   ) {
-    // Generate an ID if not provided (important for new pieces)
-    super(id || `${type}-${color}-${nextId++}`);
+    // Generate an ID if not provided, safely reproducible across instances without global state mutation 
+    super(id || `${type}-${color}-${Math.random().toString(36).substring(2, 10)}`);
     Object.freeze(this);
   }
 

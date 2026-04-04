@@ -15,6 +15,16 @@ export {
     GameStatusChangedEvent,
 } from './domain/events/ChessEvents';
 
+// ─── Domain Errors ───────────────────────────────────────────────────────────
+export {
+    DomainError,
+    GameOverError,
+    InvalidTurnError,
+    IllegalMoveError,
+    InvalidPositionError
+} from './domain/errors';
+
+
 // ─── Domain Models ───────────────────────────────────────────────────────────
 export { Board } from './domain/models/Board';
 export { Game, GameStatus } from './domain/models/Game';
