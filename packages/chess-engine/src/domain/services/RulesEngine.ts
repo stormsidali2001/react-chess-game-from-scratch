@@ -19,24 +19,24 @@ export class RulesEngine {
     return false;
   }
 
-  static getLegalMoves(board: Board, position: Position): Position[] {
+  static getLegalMoves(board: Board, position: Position, enPassantTarget: Position | null = null): Position[] {
     const piece = board.getPieceAt(position);
     if (!piece) return [];
 
-    const pseudoLegalMoves = MoveGenerator.getValidMoves(board, position);
+    const pseudoLegalMoves = MoveGenerator.getValidMoves(board, position, enPassantTarget);
     return pseudoLegalMoves.filter(move => {
       const simulatedBoard = board.movePiece(position, move);
       return !this.isKingInCheck(simulatedBoard, piece.color);
     });
   }
 
-  static isCheckmate(board: Board, color: Color): boolean {
+  static isCheckmate(board: Board, color: Color, enPassantTarget: Position | null = null): boolean {
     if (!this.isKingInCheck(board, color)) return false;
 
     const entries = Array.from(board.pieces.entries());
     for (const [posStr, piece] of entries) {
       if (piece.color === color) {
-        const legalMoves = this.getLegalMoves(board, Position.fromString(posStr));
+        const legalMoves = this.getLegalMoves(board, Position.fromString(posStr), enPassantTarget);
         if (legalMoves.length > 0) return false;
       }
     }

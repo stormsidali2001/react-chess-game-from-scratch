@@ -20,7 +20,7 @@ export enum GameStatus {
 }
 
 export interface IGameRules {
-  isCheckmate(board: Board, turn: Color): boolean;
+  isCheckmate(board: Board, turn: Color, enPassantTarget: Position | null): boolean;
   isKingInCheck(board: Board, turn: Color): boolean;
 }
 
@@ -37,6 +37,7 @@ export interface GameProps {
   history: MoveRecord[];
   captured: Record<Color, Piece[]>;
   status: GameStatus;
+  enPassantTarget: Position | null;
 }
 
 export class Game extends BaseAggregateRoot {
@@ -45,6 +46,7 @@ export class Game extends BaseAggregateRoot {
   public history: MoveRecord[];
   public captured: Record<Color, Piece[]>;
   public status: GameStatus;
+  public enPassantTarget: Position | null;
 
   private constructor(props: GameProps) {
     super();
@@ -53,15 +55,17 @@ export class Game extends BaseAggregateRoot {
     this.history = props.history;
     this.captured = props.captured;
     this.status = props.status;
+    this.enPassantTarget = props.enPassantTarget;
   }
 
-  public static create(props: { board: Board, turn?: Color, history?: MoveRecord[], captured?: Record<Color, Piece[]>, status?: GameStatus }): Game {
+  public static create(props: { board: Board, turn?: Color, history?: MoveRecord[], captured?: Record<Color, Piece[]>, status?: GameStatus, enPassantTarget?: Position | null }): Game {
     return new Game({
       board: props.board,
       turn: props.turn ?? Color.WHITE,
       history: props.history ?? [],
       captured: props.captured ?? { [Color.WHITE]: [], [Color.BLACK]: [] },
       status: props.status ?? GameStatus.ACTIVE,
+      enPassantTarget: props.enPassantTarget ?? null
     });
   }
 
@@ -80,10 +84,27 @@ export class Game extends BaseAggregateRoot {
 
     const targetPiece = this.board.getPieceAt(to);
 
-    // 1. Handle Captures
+    // 1. Handle Regular Captures
     if (targetPiece) {
       this.captured[targetPiece.color].push(targetPiece);
       this.addDomainEvent(new PieceCapturedEvent(to, targetPiece));
+    }
+
+    // 1.5 Handle En Passant Captures
+    let isEnPassantCapture = false;
+    if (piece.type === PieceType.PAWN && !targetPiece && from.x !== to.x) {
+      // Diagonal pawn move to an empty square implies en passant!
+      const victimPos = new Position(to.x, from.y);
+      const victimPawn = this.board.getPieceAt(victimPos);
+      if (victimPawn) {
+        this.captured[victimPawn.color].push(victimPawn);
+        this.addDomainEvent(new PieceCapturedEvent(victimPos, victimPawn));
+        // Remove victim from the board directly as well
+        this.board = new Board(
+          new Map(Array.from(this.board.pieces.entries()).filter(([posStr]) => posStr !== victimPos.toString()))
+        );
+        isEnPassantCapture = true;
+      }
     }
 
     // 2. Handle Promotion Logic
@@ -95,8 +116,17 @@ export class Game extends BaseAggregateRoot {
 
     // 3. Update State
     this.board = this.board.movePiece(from, to, movedPiece);
-    this.history.push({ from, to, piece, captured: targetPiece });
+    const capturedPiece = targetPiece || (isEnPassantCapture ? new Piece(PieceType.PAWN, getOpponentColor(this.turn)) : undefined);
+    this.history.push({ from, to, piece, captured: capturedPiece });
     this.turn = getOpponentColor(this.turn);
+
+    // 3.5 Calculate new En Passant target
+    let nextEnPassantTarget = null;
+    if (piece.type === PieceType.PAWN && Math.abs(from.y - to.y) === 2) {
+      const stepDirection = piece.color === Color.WHITE ? -1 : 1;
+      nextEnPassantTarget = new Position(from.x, from.y + stepDirection);
+    }
+    this.enPassantTarget = nextEnPassantTarget;
 
     // 4. Record Move Event
     this.addDomainEvent(new PieceMovedEvent(from, to, movedPiece));
@@ -108,7 +138,7 @@ export class Game extends BaseAggregateRoot {
   private evaluateGameStatus(rules: IGameRules): void {
     let newStatus = GameStatus.ACTIVE;
 
-    if (rules.isCheckmate(this.board, this.turn)) {
+    if (rules.isCheckmate(this.board, this.turn, this.enPassantTarget)) {
       newStatus = GameStatus.CHECKMATE;
     } else if (rules.isKingInCheck(this.board, this.turn)) {
       newStatus = GameStatus.CHECK;
@@ -134,7 +164,8 @@ export class Game extends BaseAggregateRoot {
         [Color.WHITE]: [...this.captured[Color.WHITE]],
         [Color.BLACK]: [...this.captured[Color.BLACK]],
       },
-      status: this.status
+      status: this.status,
+      enPassantTarget: this.enPassantTarget
     });
     // Copy events if they haven't been dispatched
     this.domainEvents.forEach(e => newGame.addDomainEvent(e));

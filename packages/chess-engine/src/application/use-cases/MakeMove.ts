@@ -14,7 +14,7 @@ export class MakeMoveUseCase {
     const game = this.repository.getGame();
 
     // 1. Validate if the move is legal (Still Domain Logic, but we can do it here or inside Game)
-    const legalMoves = RulesEngine.getLegalMoves(game.board, from);
+    const legalMoves = RulesEngine.getLegalMoves(game.board, from, game.enPassantTarget);
     if (!legalMoves.some(m => m.equals(to))) {
       throw new IllegalMoveError();
     }

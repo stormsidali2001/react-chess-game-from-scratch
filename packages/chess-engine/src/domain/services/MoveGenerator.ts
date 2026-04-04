@@ -5,12 +5,12 @@ import { Board } from '../models/Board';
 import { Piece } from '../models/Piece';
 
 export class MoveGenerator {
-  static getValidMoves(board: Board, position: Position): Position[] {
+  static getValidMoves(board: Board, position: Position, enPassantTarget: Position | null = null): Position[] {
     const piece = board.getPieceAt(position);
     if (!piece) return [];
 
     switch (piece.type) {
-      case PieceType.PAWN: return this.getPawnMoves(board, position, piece);
+      case PieceType.PAWN: return this.getPawnMoves(board, position, piece, enPassantTarget);
       // Sliding: [dx (col), dy (row)]
       case PieceType.ROOK: return this.getSlidingMoves(board, position, piece, [[1, 0], [-1, 0], [0, 1], [0, -1]]);
       case PieceType.BISHOP: return this.getSlidingMoves(board, position, piece, [[1, 1], [1, -1], [-1, 1], [-1, -1]]);
@@ -21,7 +21,7 @@ export class MoveGenerator {
     }
   }
 
-  static getPawnMoves(board: Board, pos: Position, piece: Piece): Position[] {
+  static getPawnMoves(board: Board, pos: Position, piece: Piece, enPassantTarget: Position | null): Position[] {
     const moves: Position[] = [];
     const forward = piece.color === Color.WHITE ? -1 : 1;
     const startRow = piece.color === Color.WHITE ? 6 : 1;
@@ -47,6 +47,9 @@ export class MoveGenerator {
       if (Position.isValid(pos.x + dx, pos.y + dy)) {
         const diagPos = new Position(pos.x + dx, pos.y + dy);
         if (board.isOccupiedBy(diagPos, getOpponentColor(piece.color))) {
+          moves.push(diagPos);
+        } else if (enPassantTarget && enPassantTarget.equals(diagPos)) {
+          // En passant allows diagonal pawn capture on an empty target square 
           moves.push(diagPos);
         }
       }
