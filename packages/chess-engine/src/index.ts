@@ -7,6 +7,7 @@ export { ValueObject } from './domain/core/ValueObject';
 // ─── Domain Enums ────────────────────────────────────────────────────────────
 export { Color, getOpponentColor } from './domain/enums/Color';
 export { PieceType } from './domain/enums/PieceType';
+export { GameStatus } from './domain/enums/GameStatus';
 
 // ─── Domain Events ───────────────────────────────────────────────────────────
 export {
@@ -24,23 +25,24 @@ export {
     InvalidPositionError
 } from './domain/errors';
 
-
 // ─── Domain Models ───────────────────────────────────────────────────────────
 export { Board } from './domain/models/Board';
-export { Game, GameStatus } from './domain/models/Game';
-export type { MoveRecord } from './domain/models/Game';
+export { Game } from './domain/models/Game';
+export type { MoveRecord } from './domain/models/MoveRecord';
 export { Piece } from './domain/models/Piece';
 export { Position } from './domain/models/Position';
 
 // ─── Domain Services ─────────────────────────────────────────────────────────
+export type { IGameRules } from './domain/services/IGameRules';
 export { BoardSetup } from './domain/services/BoardSetup';
 export { GameFactory } from './domain/services/GameFactory';
 export { MoveGenerator } from './domain/services/MoveGenerator';
 export { MoveNotationService } from './domain/services/MoveNotationService';
-export { RulesEngine } from './domain/services/RulesEngine';
+export { RulesEngine, rulesEngine } from './domain/services/RulesEngine';
 
 // ─── Application ─────────────────────────────────────────────────────────────
 export { DomainEventDispatcher, domainEventDispatcher } from './application/DomainEventDispatcher';
 export { GameStore, gameStore } from './application/GameStore';
 export type { Listener, StoreState } from './application/GameStore';
 export { MakeMoveUseCase } from './application/use-cases/MakeMove';
+export { GetLegalMovesQuery } from './application/use-cases/GetLegalMoves';

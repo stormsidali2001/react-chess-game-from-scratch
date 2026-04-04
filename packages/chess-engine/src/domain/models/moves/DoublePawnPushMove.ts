@@ -4,7 +4,7 @@ import { Move, MoveExecutionResult } from './Move';
 
 export class DoublePawnPushMove extends Move {
     execute(board: Board): MoveExecutionResult {
-        const movedPiece = this.piece.cloneWithMove();
+        const movedPiece = this.piece.clone();
         const newBoard = board.movePiece(this.from, this.to, movedPiece);
         const stepDirection = this.from.y < this.to.y ? -1 : 1;
 

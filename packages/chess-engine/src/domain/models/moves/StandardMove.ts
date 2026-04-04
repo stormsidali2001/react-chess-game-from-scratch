@@ -14,7 +14,7 @@ export class StandardMove extends Move {
             capturedData = { piece: this.targetPiece, position: this.to };
         }
 
-        const movedPiece = this.piece.cloneWithMove();
+        const movedPiece = this.piece.clone();
         const newBoard = board.movePiece(this.from, this.to, movedPiece);
 
         return {

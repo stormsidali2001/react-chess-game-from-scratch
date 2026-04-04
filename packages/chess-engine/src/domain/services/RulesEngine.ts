@@ -3,9 +3,10 @@ import { MoveGenerator } from './MoveGenerator';
 import { Color, getOpponentColor } from '../enums/Color';
 import { Board } from '../models/Board';
 import { Move } from '../models/Move';
+import { IGameRules } from './IGameRules';
 
-export class RulesEngine {
-  static isKingInCheck(board: Board, color: Color): boolean {
+export class RulesEngine implements IGameRules {
+  isKingInCheck(board: Board, color: Color): boolean {
     const kingPos = board.findKingPosition(color);
     if (!kingPos) return false;
 
@@ -20,7 +21,7 @@ export class RulesEngine {
     return false;
   }
 
-  static getLegalMoves(board: Board, position: Position, enPassantTarget: Position | null = null): Move[] {
+  getLegalMoves(board: Board, position: Position, enPassantTarget: Position | null = null): Move[] {
     const piece = board.getPieceAt(position);
     if (!piece) return [];
 
@@ -31,7 +32,7 @@ export class RulesEngine {
     });
   }
 
-  static isCheckmate(board: Board, color: Color, enPassantTarget: Position | null = null): boolean {
+  isCheckmate(board: Board, color: Color, enPassantTarget: Position | null = null): boolean {
     if (!this.isKingInCheck(board, color)) return false;
 
     const entries = Array.from(board.pieces.entries());
@@ -44,3 +45,5 @@ export class RulesEngine {
     return true;
   }
 }
+
+export const rulesEngine = new RulesEngine();

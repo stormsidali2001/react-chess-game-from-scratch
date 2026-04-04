@@ -1,7 +1,7 @@
 import { IDomainEvent } from '../core/BaseAggregateRoot';
 import { Position } from '../models/Position';
 import { Piece } from '../models/Piece';
-import { GameStatus } from '../models/Game';
+import { GameStatus } from '../enums/GameStatus';
 
 export class PieceMovedEvent implements IDomainEvent {
   public dateTimeOccurred: Date = new Date();

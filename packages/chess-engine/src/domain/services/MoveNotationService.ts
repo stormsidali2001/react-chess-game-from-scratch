@@ -1,4 +1,5 @@
-import { MoveRecord, Game, GameStatus } from "../models/Game";
+import { MoveRecord } from "../models/MoveRecord";
+import { GameStatus } from "../enums/GameStatus";
 import { PieceType } from "../enums/PieceType";
 import { Color } from "../enums/Color";
 

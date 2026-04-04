@@ -9,14 +9,12 @@ export class EnPassantMove extends Move {
     }
 
     execute(board: Board): MoveExecutionResult {
-        const movedPiece = this.piece.cloneWithMove();
+        const movedPiece = this.piece.clone();
         const boardWithMove = board.movePiece(this.from, this.to, movedPiece);
-
-        // Specifically remove the victim pawn from the board explicitly without a normal capture square mapping
-        const newPiecesMap = new Map(Array.from(boardWithMove.pieces.entries()).filter(([posStr]) => posStr !== this.victimPosition.toString()));
+        const boardWithCapture = boardWithMove.removePieceAt(this.victimPosition);
 
         return {
-            board: new Board(newPiecesMap),
+            board: boardWithCapture,
             movedPiece,
             capturedData: { piece: this.victimPiece, position: this.victimPosition },
             enPassantTarget: null

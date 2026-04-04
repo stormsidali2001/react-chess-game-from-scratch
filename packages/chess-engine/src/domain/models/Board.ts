@@ -33,7 +33,13 @@ export class Board extends ValueObject<BoardProps> {
 
     const newPieces = new Map(this.pieces);
     newPieces.delete(from.toString());
-    newPieces.set(to.toString(), explicitPiece ? explicitPiece : piece.cloneWithMove());
+    newPieces.set(to.toString(), explicitPiece ?? piece.clone());
+    return new Board(newPieces);
+  }
+
+  removePieceAt(position: Position): Board {
+    const newPieces = new Map(this.pieces);
+    newPieces.delete(position.toString());
     return new Board(newPieces);
   }
 

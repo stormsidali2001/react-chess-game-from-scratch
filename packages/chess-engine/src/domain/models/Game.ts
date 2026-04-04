@@ -1,9 +1,11 @@
 import { Color, getOpponentColor } from "../enums/Color";
+import { GameStatus } from "../enums/GameStatus";
 import { Board } from "./Board";
 import { Position } from "./Position";
 import { Piece } from "./Piece";
 import { Move } from "./Move";
-import { PieceType } from "../enums/PieceType";
+import { MoveRecord } from "./MoveRecord";
+import { IGameRules } from "../services/IGameRules";
 import { BaseAggregateRoot } from "../core/BaseAggregateRoot";
 import { GameOverError, InvalidTurnError } from "../errors";
 import {
@@ -12,27 +14,7 @@ import {
   GameStatusChangedEvent,
 } from "../events/ChessEvents";
 
-export enum GameStatus {
-  ACTIVE = "active",
-  CHECK = "check",
-  CHECKMATE = "checkmate",
-  STALEMATE = "stalemate",
-  DRAW = "draw",
-}
-
-export interface IGameRules {
-  isCheckmate(board: Board, turn: Color, enPassantTarget: Position | null): boolean;
-  isKingInCheck(board: Board, turn: Color): boolean;
-}
-
-export interface MoveRecord {
-  from: Position;
-  to: Position;
-  piece: Piece;
-  captured?: Piece;
-}
-
-export interface GameProps {
+interface GameProps {
   board: Board;
   turn: Color;
   history: MoveRecord[];
@@ -42,100 +24,117 @@ export interface GameProps {
 }
 
 export class Game extends BaseAggregateRoot {
-  public board: Board;
-  public turn: Color;
-  public history: MoveRecord[];
-  public captured: Record<Color, Piece[]>;
-  public status: GameStatus;
-  public enPassantTarget: Position | null;
+  private _board: Board;
+  private _turn: Color;
+  private _history: MoveRecord[];
+  private _captured: Record<Color, Piece[]>;
+  private _status: GameStatus;
+  private _enPassantTarget: Position | null;
 
   private constructor(props: GameProps) {
     super();
-    this.board = props.board;
-    this.turn = props.turn;
-    this.history = props.history;
-    this.captured = props.captured;
-    this.status = props.status;
-    this.enPassantTarget = props.enPassantTarget;
+    this._board = props.board;
+    this._turn = props.turn;
+    this._history = props.history;
+    this._captured = props.captured;
+    this._status = props.status;
+    this._enPassantTarget = props.enPassantTarget;
   }
 
-  public static create(props: { board: Board, turn?: Color, history?: MoveRecord[], captured?: Record<Color, Piece[]>, status?: GameStatus, enPassantTarget?: Position | null }): Game {
+  get board(): Board { return this._board; }
+  get turn(): Color { return this._turn; }
+  get history(): readonly MoveRecord[] { return this._history; }
+  get captured(): Readonly<Record<Color, readonly Piece[]>> { return this._captured; }
+  get status(): GameStatus { return this._status; }
+  get enPassantTarget(): Position | null { return this._enPassantTarget; }
+
+  public static create(props: {
+    board: Board;
+    turn?: Color;
+    history?: MoveRecord[];
+    captured?: Record<Color, Piece[]>;
+    status?: GameStatus;
+    enPassantTarget?: Position | null;
+  }): Game {
     return new Game({
       board: props.board,
       turn: props.turn ?? Color.WHITE,
       history: props.history ?? [],
       captured: props.captured ?? { [Color.WHITE]: [], [Color.BLACK]: [] },
       status: props.status ?? GameStatus.ACTIVE,
-      enPassantTarget: props.enPassantTarget ?? null
+      enPassantTarget: props.enPassantTarget ?? null,
     });
   }
 
-  /**
-   * MUTABLE Domain Logic using Value Objects (Path 2)
-   */
   public applyMove(move: Move, rules: IGameRules): void {
-    if (this.status === GameStatus.CHECKMATE || this.status === GameStatus.STALEMATE) {
+    if (
+      this._status === GameStatus.CHECKMATE ||
+      this._status === GameStatus.STALEMATE
+    ) {
       throw new GameOverError();
     }
 
-    if (move.piece.color !== this.turn) {
+    if (move.piece.color !== this._turn) {
       throw new InvalidTurnError();
     }
 
-    const { board: newBoard, capturedData, enPassantTarget: newEnPassant, movedPiece } = move.execute(this.board);
+    const {
+      board: newBoard,
+      capturedData,
+      enPassantTarget: newEnPassant,
+      movedPiece,
+    } = move.execute(this._board);
 
     if (capturedData) {
-      this.captured[capturedData.piece.color].push(capturedData.piece);
-      this.addDomainEvent(new PieceCapturedEvent(capturedData.position, capturedData.piece));
+      this._captured[capturedData.piece.color].push(capturedData.piece);
+      this.addDomainEvent(
+        new PieceCapturedEvent(capturedData.position, capturedData.piece),
+      );
     }
 
-    // Update State
-    this.board = newBoard;
-    this.enPassantTarget = newEnPassant;
-    this.history.push({ from: move.from, to: move.to, piece: move.piece, captured: capturedData?.piece });
-    this.turn = getOpponentColor(this.turn);
+    this._board = newBoard;
+    this._enPassantTarget = newEnPassant;
+    this._history.push({
+      from: move.from,
+      to: move.to,
+      piece: move.piece,
+      captured: capturedData?.piece,
+    });
+    this._turn = getOpponentColor(this._turn);
 
-    // Record Move Event
     this.addDomainEvent(new PieceMovedEvent(move.from, move.to, movedPiece));
 
-    // Evaluate Invariants
     this.evaluateGameStatus(rules);
   }
 
   private evaluateGameStatus(rules: IGameRules): void {
     let newStatus = GameStatus.ACTIVE;
 
-    if (rules.isCheckmate(this.board, this.turn, this.enPassantTarget)) {
+    if (rules.isCheckmate(this._board, this._turn, this._enPassantTarget)) {
       newStatus = GameStatus.CHECKMATE;
-    } else if (rules.isKingInCheck(this.board, this.turn)) {
+    } else if (rules.isKingInCheck(this._board, this._turn)) {
       newStatus = GameStatus.CHECK;
     }
 
-    if (this.status !== newStatus) {
-      this.status = newStatus;
+    if (this._status !== newStatus) {
+      this._status = newStatus;
       this.addDomainEvent(new GameStatusChangedEvent(newStatus));
     }
   }
 
-  // Status is now completely managed internally via evaluateGameStatus.
-
-  /**
-   * Helper to create a deep clone for the Application Layer's snapshotting
-   */
   public clone(): Game {
     const newGame = Game.create({
-      board: this.board,
-      turn: this.turn,
-      history: [...this.history],
+      board: this._board,
+      turn: this._turn,
+      history: [...this._history],
       captured: {
-        [Color.WHITE]: [...this.captured[Color.WHITE]],
-        [Color.BLACK]: [...this.captured[Color.BLACK]],
+        [Color.WHITE]: [...this._captured[Color.WHITE]],
+        [Color.BLACK]: [...this._captured[Color.BLACK]],
       },
-      status: this.status,
-      enPassantTarget: this.enPassantTarget
+      status: this._status,
+      enPassantTarget: this._enPassantTarget,
     });
-    // Copy events if they haven't been dispatched
-    this.domainEvents.forEach(e => newGame.addDomainEvent(e));
+    this.domainEvents.forEach((e) => newGame.addDomainEvent(e));
     return newGame;
   }
 }

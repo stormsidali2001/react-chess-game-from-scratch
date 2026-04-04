@@ -20,7 +20,7 @@ export class Piece extends ValueObject<PieceProps> {
     return this.props.color;
   }
 
-  cloneWithMove(): Piece {
+  clone(): Piece {
     return new Piece(this.type, this.color);
   }
 }
