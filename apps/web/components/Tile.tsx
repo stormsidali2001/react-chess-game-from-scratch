@@ -6,18 +6,21 @@ interface TileProps {
   color: 'white' | 'black';
   highlighted?: boolean;
   hidden?: boolean;
+  isFlashing?: boolean;
   rankLabel?: string;
   fileLabel?: string;
 }
 
-const Tile: React.FC<TileProps> = ({ piece, color, highlighted, hidden, rankLabel, fileLabel }) => {
+const Tile: React.FC<TileProps> = ({ piece, color, highlighted, hidden, isFlashing, rankLabel, fileLabel }) => {
   const isWhite = color === 'white';
   const bgColor = isWhite ? 'bg-slate-200' : 'bg-slate-500';
   const highlightOverlay = highlighted ? 'bg-yellow-200/50 border-2 border-yellow-400' : '';
   const labelColor = isWhite ? 'text-slate-500' : 'text-slate-200';
 
+  const flashClass = isFlashing ? 'flash-capture' : '';
+
   return (
-    <div className={`tile relative flex items-center justify-center w-full h-full ${bgColor} ${highlightOverlay}`}>
+    <div className={`tile relative flex items-center justify-center w-full h-full ${bgColor} ${highlightOverlay} ${flashClass}`}>
 
       {/* Rank Label (1-8) - Top Left */}
       {rankLabel && (
