@@ -3,13 +3,19 @@ import { Color } from '../enums/Color';
 import { PieceType } from '../enums/PieceType';
 import { Piece } from './Piece';
 import { BoardSetup } from '../services/BoardSetup';
+import { ValueObject } from '../core/ValueObject';
 
-export class Board {
-  public readonly pieces: Map<string, Piece>;
+interface BoardProps {
+  pieces: Map<string, Piece>;
+}
 
+export class Board extends ValueObject<BoardProps> {
   constructor(pieces: Map<string, Piece> = new Map()) {
-    this.pieces = pieces;
-    Object.freeze(this);
+    super({ pieces });
+  }
+
+  get pieces(): Map<string, Piece> {
+    return this.props.pieces;
   }
 
   getPieceAt(position: Position): Piece | undefined {

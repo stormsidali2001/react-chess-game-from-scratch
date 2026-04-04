@@ -1,21 +1,32 @@
+import { ValueObject } from '../core/ValueObject';
+
+interface PositionProps {
+  x: number;
+  y: number;
+}
+
 /**
  * x = Column (0-7, horizontal)
  * y = Row (0-7, vertical)
  */
-export class Position {
-  constructor(public readonly x: number, public readonly y: number) {
+export class Position extends ValueObject<PositionProps> {
+  constructor(x: number, y: number) {
     if (!Position.isValid(x, y)) {
       throw new Error(`Invalid position: (${x}, ${y})`);
     }
-    Object.freeze(this);
+    super({ x, y });
   }
+
+  get x(): number { return this.props.x; }
+  get y(): number { return this.props.y; }
 
   static isValid(x: number, y: number): boolean {
     return x >= 0 && x <= 7 && y >= 0 && y <= 7;
   }
 
-  equals(other: Position): boolean {
-    return this.x === other.x && this.y === other.y;
+  // Override equals to use props comparison from base class
+  public equals(other?: Position): boolean {
+    return super.equals(other);
   }
 
   toString(): string {

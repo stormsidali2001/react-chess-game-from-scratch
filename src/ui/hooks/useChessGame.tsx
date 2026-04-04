@@ -10,6 +10,7 @@ export interface UseChessGameReturn {
   game: Game;
   selectedPosition: Position | null;
   legalMoves: Position[];
+  formattedHistory: string[];
   selectPosition: (pos: Position | null) => void;
   makeMove: (to: Position) => boolean;
   board: Board;
@@ -18,7 +19,6 @@ export interface UseChessGameReturn {
 }
 
 export function useChessGame(): UseChessGameReturn {
-  // Now subscribing to the full store state (game, selectedPosition, legalMoves)
   const store = useSyncExternalStore(
     gameStore.subscribe,
     gameStore.getSnapshot
@@ -36,6 +36,7 @@ export function useChessGame(): UseChessGameReturn {
     game: store.game,
     selectedPosition: store.selectedPosition,
     legalMoves: store.legalMoves,
+    formattedHistory: store.formattedHistory,
     selectPosition,
     makeMove,
     board: store.game.board,
