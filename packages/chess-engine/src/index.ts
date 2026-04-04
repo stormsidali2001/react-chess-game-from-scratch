@@ -34,6 +34,7 @@ export { Position } from './domain/models/Position';
 
 // ─── Domain Services ─────────────────────────────────────────────────────────
 export { BoardSetup } from './domain/services/BoardSetup';
+export { GameFactory } from './domain/services/GameFactory';
 export { MoveGenerator } from './domain/services/MoveGenerator';
 export { MoveNotationService } from './domain/services/MoveNotationService';
 export { RulesEngine } from './domain/services/RulesEngine';

@@ -4,6 +4,7 @@ import { MakeMoveUseCase } from './use-cases/MakeMove';
 import { RulesEngine } from '../domain/services/RulesEngine';
 import { DomainEventDispatcher, domainEventDispatcher } from './DomainEventDispatcher';
 import { MoveNotationService } from '../domain/services/MoveNotationService';
+import { GameFactory } from '../domain/services/GameFactory';
 import { IGameRepository } from './ports/IGameRepository';
 
 export type Listener = () => void;
@@ -20,7 +21,11 @@ export class GameStore implements IGameRepository {
   private listeners: Set<Listener> = new Set();
   private moveUseCase: MakeMoveUseCase;
 
-  constructor(initialGame: Game = Game.create()) {
+  constructor(initialGame?: Game) {
+    if (!initialGame) {
+      initialGame = GameFactory.createStandardGame();
+    }
+
     this.state = {
       game: initialGame,
       selectedPosition: null,
@@ -90,7 +95,11 @@ export class GameStore implements IGameRepository {
     }
   }
 
-  public reset(newGame: Game = Game.create()): void {
+  public reset(newGame?: Game): void {
+    if (!newGame) {
+      newGame = GameFactory.createStandardGame();
+    }
+
     this.state = {
       game: newGame,
       selectedPosition: null,

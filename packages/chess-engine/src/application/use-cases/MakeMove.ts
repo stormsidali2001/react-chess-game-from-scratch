@@ -19,8 +19,8 @@ export class MakeMoveUseCase {
       throw new IllegalMoveError();
     }
 
-    // 2. MUTATE the domain object
-    game.makeMove(from, to);
+    // 2. MUTATE the domain object, injecting the rules engine domain service directly
+    game.makeMove(from, to, RulesEngine);
 
     // 3. Persist the changes
     this.repository.save(game);

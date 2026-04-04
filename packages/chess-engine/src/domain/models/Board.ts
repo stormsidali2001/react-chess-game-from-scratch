@@ -2,7 +2,6 @@ import { Position } from './Position';
 import { Color } from '../enums/Color';
 import { PieceType } from '../enums/PieceType';
 import { Piece } from './Piece';
-import { BoardSetup } from '../services/BoardSetup';
 import { ValueObject } from '../core/ValueObject';
 
 interface BoardProps {
@@ -55,9 +54,5 @@ export class Board extends ValueObject<BoardProps> {
       }
     }
     return null;
-  }
-
-  static initial(): Board {
-    return BoardSetup.standard();
   }
 }

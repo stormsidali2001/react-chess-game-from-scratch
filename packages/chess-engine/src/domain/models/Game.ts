@@ -4,7 +4,6 @@ import { Position } from "./Position";
 import { Piece } from "./Piece";
 import { PieceType } from "../enums/PieceType";
 import { BaseAggregateRoot } from "../core/BaseAggregateRoot";
-import { RulesEngine } from "../services/RulesEngine";
 import { GameOverError, InvalidTurnError } from "../errors";
 import {
   PieceMovedEvent,
@@ -18,6 +17,11 @@ export enum GameStatus {
   CHECKMATE = "checkmate",
   STALEMATE = "stalemate",
   DRAW = "draw",
+}
+
+export interface IGameRules {
+  isCheckmate(board: Board, turn: Color): boolean;
+  isKingInCheck(board: Board, turn: Color): boolean;
 }
 
 export interface MoveRecord {
@@ -51,20 +55,20 @@ export class Game extends BaseAggregateRoot {
     this.status = props.status;
   }
 
-  public static create(props?: Partial<GameProps>): Game {
+  public static create(props: { board: Board, turn?: Color, history?: MoveRecord[], captured?: Record<Color, Piece[]>, status?: GameStatus }): Game {
     return new Game({
-      board: props?.board ?? Board.initial(),
-      turn: props?.turn ?? Color.WHITE,
-      history: props?.history ?? [],
-      captured: props?.captured ?? { [Color.WHITE]: [], [Color.BLACK]: [] },
-      status: props?.status ?? GameStatus.ACTIVE,
+      board: props.board,
+      turn: props.turn ?? Color.WHITE,
+      history: props.history ?? [],
+      captured: props.captured ?? { [Color.WHITE]: [], [Color.BLACK]: [] },
+      status: props.status ?? GameStatus.ACTIVE,
     });
   }
 
   /**
-   * MUTABLE Domain Logic
+   * MUTABLE Domain Logic using Double Dispatch for Domain Services
    */
-  public makeMove(from: Position, to: Position): void {
+  public makeMove(from: Position, to: Position, rules: IGameRules): void {
     if (this.status === GameStatus.CHECKMATE || this.status === GameStatus.STALEMATE) {
       throw new GameOverError();
     }
@@ -86,7 +90,7 @@ export class Game extends BaseAggregateRoot {
     let movedPiece = piece.cloneWithMove();
     const lastRank = piece.color === Color.WHITE ? 0 : 7;
     if (piece.type === PieceType.PAWN && to.y === lastRank) {
-      movedPiece = new Piece(PieceType.QUEEN, piece.color, true);
+      movedPiece = new Piece(PieceType.QUEEN, piece.color);
     }
 
     // 3. Update State
@@ -97,16 +101,16 @@ export class Game extends BaseAggregateRoot {
     // 4. Record Move Event
     this.addDomainEvent(new PieceMovedEvent(from, to, movedPiece));
 
-    // 5. Evaluate Invariants (Check / Checkmate)
-    this.evaluateGameStatus();
+    // 5. Evaluate Invariants via injected Domain Service (Double Dispatch)
+    this.evaluateGameStatus(rules);
   }
 
-  private evaluateGameStatus(): void {
+  private evaluateGameStatus(rules: IGameRules): void {
     let newStatus = GameStatus.ACTIVE;
 
-    if (RulesEngine.isCheckmate(this.board, this.turn)) {
+    if (rules.isCheckmate(this.board, this.turn)) {
       newStatus = GameStatus.CHECKMATE;
-    } else if (RulesEngine.isKingInCheck(this.board, this.turn)) {
+    } else if (rules.isKingInCheck(this.board, this.turn)) {
       newStatus = GameStatus.CHECK;
     }
 

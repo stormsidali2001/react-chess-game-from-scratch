@@ -1,20 +1,26 @@
 import { PieceType } from '../enums/PieceType';
 import { Color } from '../enums/Color';
-import { BaseEntity } from '../core/BaseEntity';
+import { ValueObject } from '../core/ValueObject';
 
-export class Piece extends BaseEntity<string> {
-  constructor(
-    public readonly type: PieceType,
-    public readonly color: Color,
-    public readonly hasMoved: boolean = false,
-    id?: string
-  ) {
-    // Generate an ID if not provided, safely reproducible across instances without global state mutation 
-    super(id || `${type}-${color}-${Math.random().toString(36).substring(2, 10)}`);
-    Object.freeze(this);
+interface PieceProps {
+  type: PieceType;
+  color: Color;
+}
+
+export class Piece extends ValueObject<PieceProps> {
+  constructor(type: PieceType, color: Color) {
+    super({ type, color });
+  }
+
+  get type(): PieceType {
+    return this.props.type;
+  }
+
+  get color(): Color {
+    return this.props.color;
   }
 
   cloneWithMove(): Piece {
-    return new Piece(this.type, this.color, true, this.id);
+    return new Piece(this.type, this.color);
   }
 }
