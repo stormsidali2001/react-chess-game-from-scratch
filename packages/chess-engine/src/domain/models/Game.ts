@@ -5,6 +5,7 @@ import { Board } from "./Board";
 import { Position } from "./Position";
 import { Piece } from "./Piece";
 import { Move } from "./Move";
+import { CastleMove } from "./moves/CastleMove";
 import { MoveRecord } from "./MoveRecord";
 import { CastlingRights } from "./CastlingRights";
 import { BaseAggregateRoot } from "../core/BaseAggregateRoot";
@@ -13,6 +14,8 @@ import {
   PieceMovedEvent,
   PieceCapturedEvent,
   GameStatusChangedEvent,
+  PawnPromotedEvent,
+  CastledEvent,
 } from "../events/ChessEvents";
 
 interface GameProps {
@@ -131,6 +134,15 @@ export class Game extends BaseAggregateRoot {
           : undefined,
     });
     this._turn = getOpponentColor(this._turn);
+
+    if (move instanceof CastleMove) {
+      const side = move.rookFrom.x === 7 ? 'kingside' : 'queenside';
+      this.addDomainEvent(new CastledEvent(side, move.from, move.to, move.rookFrom, move.rookTo));
+    }
+
+    if (move.piece.type === PieceType.PAWN && movedPiece.type !== PieceType.PAWN) {
+      this.addDomainEvent(new PawnPromotedEvent(move.from, move.to, movedPiece.type));
+    }
 
     this.addDomainEvent(new PieceMovedEvent(move.from, move.to, movedPiece));
   }

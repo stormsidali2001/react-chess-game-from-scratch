@@ -4,6 +4,8 @@ import {
     domainEventDispatcher,
     GameStatusChangedEvent,
     PieceCapturedEvent,
+    PawnPromotedEvent,
+    CastledEvent,
     GameStatus
 } from '@chess/engine';
 
@@ -55,13 +57,36 @@ export function useChessVisuals() {
             }, 400);
         };
 
+        // 3. Handle Pawn Promotions
+        const handlePawnPromoted = (event: PawnPromotedEvent) => {
+            toast.success(`Pawn promoted to ${event.promotedTo}!`, {
+                duration: 3000,
+                position: 'top-center',
+                style: { background: '#1e293b', color: '#fff', fontWeight: 'bold' }
+            });
+        };
+
+        // 4. Handle Castling
+        const handleCastled = (event: CastledEvent) => {
+            const label = event.side === 'kingside' ? 'Castled kingside' : 'Castled queenside';
+            toast(label, {
+                duration: 2000,
+                position: 'top-center',
+                icon: '🏰',
+            });
+        };
+
         domainEventDispatcher.register(GameStatusChangedEvent, handleStatusChanged);
         domainEventDispatcher.register(PieceCapturedEvent, handlePieceCaptured);
+        domainEventDispatcher.register(PawnPromotedEvent, handlePawnPromoted);
+        domainEventDispatcher.register(CastledEvent, handleCastled);
 
         // Cleanup
         return () => {
             domainEventDispatcher.unregister(GameStatusChangedEvent, handleStatusChanged);
             domainEventDispatcher.unregister(PieceCapturedEvent, handlePieceCaptured);
+            domainEventDispatcher.unregister(PawnPromotedEvent, handlePawnPromoted);
+            domainEventDispatcher.unregister(CastledEvent, handleCastled);
         };
     }, []);
 

@@ -19,6 +19,8 @@ import {
   PieceMovedEvent,
   PieceCapturedEvent,
   GameStatusChangedEvent,
+  PawnPromotedEvent,
+  CastledEvent,
 } from '../domain/events/ChessEvents';
 import { buildGame } from './helpers/buildGame';
 
@@ -275,6 +277,54 @@ describe('Game (Aggregate Root)', () => {
       expect(game.board.getPieceAt(pos('a1'))).toBeUndefined(); // a1 vacated
     });
 
+    it('happy path – should emit CastledEvent with correct side and squares on king-side castle', () => {
+      const game = buildGame({
+        0: 'a b c d e f g h',
+        8: 'r . . . k . . r',
+        7: 'p p p p p p p p',
+        6: '. . . . . . . .',
+        5: '. . . . . . . .',
+        4: '. . . . . . . .',
+        3: '. . . . . . . .',
+        2: 'P P P P P P P P',
+        1: 'R . . . K . . R',
+      }, { castlingRights: CastlingRights.fromFlags(true, true, true, true) });
+
+      const king = at(game, 'e1');
+      const rook = at(game, 'h1');
+      game.applyMove(new CastleMove(pos('e1'), pos('g1'), king, pos('h1'), pos('f1'), rook, pos('f1')));
+
+      const event = game.domainEvents.find(e => e instanceof CastledEvent) as CastledEvent;
+      expect(event).toBeDefined();
+      expect(event.side).toBe('kingside');
+      expect(event.kingFrom).toEqual(pos('e1'));
+      expect(event.kingTo).toEqual(pos('g1'));
+      expect(event.rookFrom).toEqual(pos('h1'));
+      expect(event.rookTo).toEqual(pos('f1'));
+    });
+
+    it('happy path – should emit CastledEvent with side "queenside" on queen-side castle', () => {
+      const game = buildGame({
+        0: 'a b c d e f g h',
+        8: 'r . . . k . . r',
+        7: 'p p p p p p p p',
+        6: '. . . . . . . .',
+        5: '. . . . . . . .',
+        4: '. . . . . . . .',
+        3: '. . . . . . . .',
+        2: 'P P P P P P P P',
+        1: 'R . . . K . . R',
+      }, { castlingRights: CastlingRights.fromFlags(true, true, true, true) });
+
+      const king = at(game, 'e1');
+      const rook = at(game, 'a1');
+      game.applyMove(new CastleMove(pos('e1'), pos('c1'), king, pos('a1'), pos('d1'), rook, pos('d1')));
+
+      const event = game.domainEvents.find(e => e instanceof CastledEvent) as CastledEvent;
+      expect(event).toBeDefined();
+      expect(event.side).toBe('queenside');
+    });
+
     it('happy path – should revoke all castling rights for a color after the king moves', () => {
       const game = buildGame({
         0: 'a b c d e f g h',
@@ -339,6 +389,28 @@ describe('Game (Aggregate Root)', () => {
       game.applyMove(new PromotionMove(pos('a7'), pos('a8'), pawn, undefined, PieceType.KNIGHT));
 
       expect(game.board.getPieceAt(pos('a8'))).toEqual(new Piece(PieceType.KNIGHT, Color.WHITE));
+    });
+
+    it('happy path – should emit PawnPromotedEvent with the correct piece type on promotion', () => {
+      const game = buildGame({
+        0: 'a b c d e f g h',
+        8: '. . . . . . . k',
+        7: 'P . . . . . . .',
+        6: '. . . . . . . .',
+        5: '. . . . . . . .',
+        4: '. . . . . . . .',
+        3: '. . . . . . . .',
+        2: '. . . . . . . .',
+        1: '. . . . K . . .',
+      });
+      const pawn = at(game, 'a7');
+      game.applyMove(new PromotionMove(pos('a7'), pos('a8'), pawn, undefined, PieceType.QUEEN));
+
+      const event = game.domainEvents.find(e => e instanceof PawnPromotedEvent) as PawnPromotedEvent;
+      expect(event).toBeDefined();
+      expect(event.from).toEqual(pos('a7'));
+      expect(event.to).toEqual(pos('a8'));
+      expect(event.promotedTo).toBe(PieceType.QUEEN);
     });
 
     it('happy path – should record the promoted piece type in history', () => {

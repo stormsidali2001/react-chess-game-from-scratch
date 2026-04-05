@@ -14,6 +14,8 @@ export {
   PieceMovedEvent,
   PieceCapturedEvent,
   GameStatusChangedEvent,
+  PawnPromotedEvent,
+  CastledEvent,
 } from "./domain/events/ChessEvents";
 
 // ─── Domain Errors ───────────────────────────────────────────────────────────
