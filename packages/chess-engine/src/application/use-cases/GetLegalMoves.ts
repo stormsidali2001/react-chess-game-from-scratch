@@ -1,7 +1,7 @@
-import { IGameRepository } from '../ports/IGameRepository';
-import { Position } from '../../domain/models/Position';
-import { CastleMove } from '../../domain/models/Move';
-import { RulesEngine } from '../../domain/services/RulesEngine';
+import { IGameRepository } from "../ports/IGameRepository";
+import { Position } from "../../domain/models/Position";
+import { CastleMove } from "../../domain/models/Move";
+import { RulesEngine } from "../../domain/services/RulesEngine";
 
 export class GetLegalMovesQuery {
   constructor(
@@ -11,9 +11,8 @@ export class GetLegalMovesQuery {
 
   execute(position: Position): Position[] {
     const game = this.repository.getGame();
-    const piece = game.board.getPieceAt(position);
 
-    if (!piece || piece.color !== game.turn) return [];
+    if (!game.isOwnPiece(position)) return [];
 
     const seen = new Set<string>();
     const targets: Position[] = [];
@@ -24,8 +23,6 @@ export class GetLegalMovesQuery {
       game.enPassantTarget,
       game.castlingRights,
     )) {
-      // For castling moves, also highlight the rook's square so the user can
-      // drag the king onto the rook (standard chess UI convention).
       if (move instanceof CastleMove) {
         const rookKey = move.rookFrom.toString();
         if (!seen.has(rookKey)) {

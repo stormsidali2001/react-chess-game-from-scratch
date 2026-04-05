@@ -57,6 +57,12 @@ export class Game extends BaseAggregateRoot {
   get castlingRights(): CastlingRights { return this._castlingRights; }
   get halfMoveClock(): number { return this._halfMoveClock; }
 
+  /** Returns true when the piece at the given position belongs to the player whose turn it is. */
+  public isOwnPiece(position: Position): boolean {
+    const piece = this._board.getPieceAt(position);
+    return piece !== undefined && piece.color === this._turn;
+  }
+
   public static create(props: {
     board: Board;
     turn?: Color;
